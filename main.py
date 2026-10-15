@@ -22,6 +22,29 @@ class StateManager:
     def update(self, dt) -> None: self.states[self.current].update(dt)
     def draw(self, surface) -> None: self.states[self.current].draw(surface)
 
+class IntroState:
+    def __init__(self, game): self.game, self.timer = game, 0.0
+    def handle_event(self, event):
+        if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN: self.game.manager.change("MENU")
+    def update(self, dt):
+        self.timer += dt
+        if self.timer >= 4.5: self.game.manager.change("MENU")
+    def draw(self, surface):
+        t = self.timer; pulse = int(190 + 55 * ((pygame.time.get_ticks() // 180) % 2)); surface.fill((9, 7, 20)); pygame.draw.rect(surface, (22, 11, 43), (0, 88, WIDTH, 92))
+        for x in range(-70, WIDTH + 70, 25): pygame.draw.line(surface, (63, 19, 75), (160, 88), (x, 180), 1)
+        for y in range(96, 180, 12): pygame.draw.line(surface, (42, 17, 58), (0, y), (WIDTH, y), 1)
+        pygame.draw.line(surface, (255, 178, 71), (266, 88), (266, 22), 2); pygame.draw.line(surface, (255, 178, 71), (256, 47), (276, 47), 1)
+        for name, pos in (("city/building-a.png", (10, 53)), ("city/building-c.png", (62, 60)), ("city/skyscraper-a.png", (278, 40))):
+            prop = load_image(name, (42, 42))
+            if prop: surface.blit(prop, pos)
+        runner_x = int(-25 + min(1.0, t / 2.2) * 130)
+        draw_person(surface, runner_x, 135, kind="girl", scale=2, top_down=True)
+        if t > 1.2: self.game.text(surface, "GREEN-EYE", (79, 49), 22, (255, 236, 105))
+        if t > 1.8: self.game.text(surface, "ALL TIDY NOW!", (91, 80), 10, (0, 222, 218))
+        if t > 2.5: self.game.text(surface, "A GLIWICE CLEANUP STORY", (80, 103), 7, COLORS["paper"])
+        if t > 3.2: self.game.text(surface, "PRESS ANY KEY", (113, 143), 7, (pulse, 37, 116))
+        self.game.text(surface, "15.10.2026 // NIGHT SHIFT", (89, 171), 6, (255, 178, 71))
+
 class MenuState:
     def __init__(self, game): self.game, self.selected, self.controls = game, 0, False
     def handle_event(self, event):
@@ -74,7 +97,7 @@ class GameOverState:
 
 class Game:
     def __init__(self):
-        pygame.init(); pygame.display.set_caption(TITLE); self.window = pygame.display.set_mode((WIDTH*WINDOW_SCALE, HEIGHT*WINDOW_SCALE)); self.canvas = pygame.Surface((WIDTH, HEIGHT)); self.fonts = {}; self.player = self.load_player(); self.manager = StateManager(self); self.overworld = OverworldState(self); self.manager.add("MENU", MenuState(self)); self.manager.add("OVERWORLD", self.overworld); self.manager.add("QUEST_BOARD", QuestBoardState(self)); self.manager.add("GAME_OVER", GameOverState(self))
+        pygame.init(); pygame.display.set_caption(TITLE); self.window = pygame.display.set_mode((WIDTH*WINDOW_SCALE, HEIGHT*WINDOW_SCALE)); self.canvas = pygame.Surface((WIDTH, HEIGHT)); self.fonts = {}; self.player = self.load_player(); self.manager = StateManager(self); self.overworld = OverworldState(self); self.manager.add("INTRO", IntroState(self)); self.manager.add("MENU", MenuState(self)); self.manager.add("OVERWORLD", self.overworld); self.manager.add("QUEST_BOARD", QuestBoardState(self)); self.manager.add("GAME_OVER", GameOverState(self)); self.manager.change("INTRO")
     def text(self, surface, value, pos, size, color):
         if size not in self.fonts: self.fonts[size] = pygame.font.Font(None, size*2)
         surface.blit(self.fonts[size].render(value, False, color), pos)
