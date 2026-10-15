@@ -280,9 +280,12 @@ class HybridGame:
                     return
                 if self.attack_cooldown > 0: return
                 self.attack_cooldown = .28
-                self.avatar.animate_rotation_y(self.avatar.rotation_y + 18, duration=.08)
                 target = min((e for e in self.enemies if not e["dead"]), key=lambda e: distance(self.avatar, e["entity"]), default=None)
                 if target and distance(self.avatar, target["entity"]) < 3.2:
+                    aim = target["entity"].position - self.avatar.position
+                    aim.y = 0
+                    if aim.length():
+                        self.avatar.rotation_y = math.degrees(math.atan2(aim.x, aim.z))
                     self.show_cleanup_hit(target["entity"])
                     target["hp"] -= 1; self.notice.text = "PAN BONK!"
                     direction = target["entity"].position - self.avatar.position; direction.y = 0
