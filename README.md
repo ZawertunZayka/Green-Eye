@@ -20,6 +20,7 @@ The project combines Ursina/Panda3D 3D models with a readable arcade HUD. It has
 - Shop, numbered hotbar inventory, coins, XP and end-of-level upgrade cards.
 - Health bar, minimap, contextual prompts and boss health bar.
 - Progress saved to `save.json`.
+- Secret Konami Code: `↑ ↑ ↓ ↓ ← → ← → B A` activates RGB character colours and `1000 / 1000 HP`.
 
 ## Requirements
 
@@ -53,6 +54,10 @@ The system Python may reject global pip installs with the PEP 668 “externally 
 | `P` | Buy a pan damage upgrade in the shop |
 | `Esc` | Pause/menu |
 | `Enter` | Continue or restart |
+
+### Secret code
+
+Enter `Up, Up, Down, Down, Left, Right, Left, Right, B, A` at any time. The player receives 1000 maximum/current HP and the character cycles through RGB colours.
 
 ## Game flow
 
