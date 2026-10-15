@@ -69,7 +69,6 @@ class HybridGame:
         self.projectiles: list[dict] = []
         self.locked_enemy: dict | None = None
         self.lock_marker: Entity | None = None
-        self.camera_heading = Vec3(0, 0, 1)
         self.avatar: Entity | None = None
         self.in_car = True
         self.attack_cooldown = 0.0
@@ -370,20 +369,17 @@ class HybridGame:
                 actor.x = clamp(actor.x, -28, 28); actor.z = clamp(actor.z, -22, 22)
                 # While walking, face the direction of travel.
                 actor.rotation_y = math.degrees(math.atan2(direction.x, direction.z))
-                self.camera_heading = direction.normalized()
+            elif actor:
+                # Keep the original idle-facing behavior.
+                to_car = self.car_entity.position - actor.position
+                actor.rotation_y = math.degrees(math.atan2(to_car.x, to_car.z))
             if actor and self.locked_enemy and not self.locked_enemy["dead"]:
                 to_target = self.locked_enemy["entity"].position - actor.position
                 to_target.y = 0
                 if to_target.length():
                     actor.rotation_y = math.degrees(math.atan2(to_target.x, to_target.z))
-        if self.in_car:
-            camera_target = actor.position + Vec3(0, 0, 1)
-            camera_position = actor.position + Vec3(0, 17, -18)
-        else:
-            camera_target = actor.position + Vec3(0, 1.2, 0) + self.camera_heading * 3
-            camera_position = actor.position + Vec3(0, 11, 0) - self.camera_heading * 16
-        camera.position = lerp(camera.position, camera_position, dt * 4)
-        camera.look_at(camera_target)
+        camera.position = lerp(camera.position, actor.position + Vec3(0, 11 if not self.in_car else 17, -16 if not self.in_car else -18), dt * 4)
+        camera.look_at(actor.position + Vec3(0, 1.2 if not self.in_car else 0, 1))
         for enemy in self.enemies:
             if enemy["dead"]: continue
             delta = actor.position - enemy["entity"].position
@@ -434,7 +430,6 @@ class HybridGame:
                 self.in_car = False
                 self.avatar.position = self.car_entity.position + Vec3(1.4, -.5, 0)
                 self.avatar.enabled = True
-                self.camera_heading = self.car_entity.forward
                 self.fight_banner.text = "CLEANUP FIGHT!"
                 self.fight_banner.enabled = True; self.fight_banner_time = 1.2
                 self.notice.text = "ON FOOT // J CLEANUP PAN // E ENTER CAR"
