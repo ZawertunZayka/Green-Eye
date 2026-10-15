@@ -40,4 +40,10 @@ in assets/user/3d_kaykit/ for character/prototype use. The current Ursina OBJ
 loader does not successfully import this particular model, so the playable
 street keeps the already verified Mini Arcade character models as fallback.
 
+The supplied KayKit Character Pack: Skeletons 1.1 FREE from
+`/home/zawe/Загрузки/KayKit_Skeletons_1.1_FREE.zip` is CC0 by Kay Lousberg
+(www.kaylousberg.com). Its Warrior, Rogue and Mage GLB models are used as the
+3D cleanup enemies; the original License.txt is preserved in
+assets/user/3d_skeletons/.
+
 If external assets are added later, record their name, author, source URL, and license here. Only CC0 or CC-BY assets are acceptable.

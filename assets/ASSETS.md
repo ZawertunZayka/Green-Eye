@@ -33,3 +33,9 @@ assets/user/3d_kaykit/ contains the selected KayKit Prototype Bits
 Dummy_Base OBJ and texture. It is kept as a swappable character asset; the
 runtime currently uses the verified Mini Arcade OBJ models because this KayKit
 OBJ export is not accepted by the installed Ursina model loader.
+
+assets/user/3d_skeletons/ contains the KayKit Skeletons character GLBs. The
+street uses Skeleton_Warrior for the bruiser, Skeleton_Rogue for the fast
+target and Skeleton_Mage for the dealer. They are loaded through the glTF
+loader and rotated from the pack's Z-up coordinates into the game's Y-up
+coordinates.
