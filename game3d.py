@@ -13,7 +13,7 @@ SAVE = ROOT / "save.json"
 CITY = "assets/user/3d_city/Models/GLB"
 CARS = "assets/user/3d_city/Models/Cars/GLB"
 ROADS = "assets/user/3d_city/Models/Roads/GLB"
-CHARACTERS = "assets/user/3d_arcade/Models/GLB format"
+CHARACTERS = "assets/user/3d_arcade/Models/OBJ format"
 NATURE = "assets/user/3d_nature/FULL_VERSION_ALL_MODELS/GLB"
 SKELETONS = "assets/user/3d_skeletons/KayKit_Skeletons_1.1_FREE/characters/gltf"
 MAP = "assets/user/city/gliwice_map.png"
@@ -37,7 +37,7 @@ def road(name):
 
 
 def character(name):
-    return f"{CHARACTERS}/{name}.glb"
+    return f"{CHARACTERS}/{name}.obj"
 
 
 def nature(name):
@@ -176,8 +176,9 @@ class HybridGame:
             self.add(Text("ZSTI SCHOOL // FINAL CLEANUP", world_position=(17, 4.25, 8.95), billboard=True, scale=.72, color=YELLOW))
         self.car_entity = Entity(model=car("sedan"), position=(-7, .5, 0), scale=1.25, collider="box")
         self.add(self.car_entity)
-        # Use Kenney's GLB character so its bundled colormap is resolved reliably.
-        self.avatar = self.add(Entity(model=character("character-gamer"), position=(-5.5, 0, 0), scale=2.25))
+        # The OBJ loader is compatible with this Ursina/glTF version; provide the
+        # shared Kenney colormap explicitly because the MTL uses a relative path.
+        self.avatar = self.add(Entity(model=character("character-gamer"), texture=f"{CHARACTERS}/Textures/colormap.png", position=(-5.5, 0, 0), scale=2.25))
         self.avatar.enabled = True
         self.in_car = True
         for name, pos, rotation in (("taxi", (-15, .45, 0), 0), ("police", (11, .45, 0), 0), ("van", (0, .45, 12), 90), ("delivery", (0, .45, -12), 90)):
