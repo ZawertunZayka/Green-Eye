@@ -13,6 +13,7 @@ class OverworldState:
         self.location_notes = ["MARKET SQUARE", "CITY CENTRE", "STATION ROAD", "OLD WALLS", "EAST DISTRICT"]
         self.story_lines = ["The board called. The city needs a cheerful cleaner.", "Neon signs point east. Someone is making a mess.", "A station contact left one last clue.", "Old walls, new trouble. Keep moving.", "The radio tower is broadcasting the final job."]
         self.pos = pygame.Vector2(112, 112)
+        self.tutorial = True
         self.enemies = []
         self.spawn_location()
         self.buildings = []
@@ -36,6 +37,9 @@ class OverworldState:
         random.Random(100 + self.location_index).shuffle(layout)
         self.enemies = [{"type": kind, "pos": pygame.Vector2(pos), "done": False} for kind, pos in layout]
     def handle_event(self, event) -> None:
+        if self.tutorial and (event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN):
+            self.tutorial = False
+            return
         if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
             if self.pos.distance_to((58, 35)) < 30: self.game.manager.change("QUEST_BOARD")
             elif self.pos.distance_to((104, 35)) < 20: self.game.manager.change("SHOP")
@@ -120,9 +124,10 @@ class OverworldState:
             prop = load_image(name, (30, 30))
             if prop: surface.blit(prop, pos)
         pygame.draw.rect(surface, (255, 37, 116), (44, 25, 30, 18)); pygame.draw.rect(surface, (12, 9, 24), (48, 29, 22, 10)); self.label(surface, "CLEANUP HQ", (47, 32), (255, 236, 105))
-        shop_prop = load_image("city/building-wide-a.png", (34, 30))
-        if shop_prop: surface.blit(shop_prop, (88, 16))
-        pygame.draw.rect(surface, (0, 222, 218), (91, 25, 27, 18)); pygame.draw.rect(surface, (12, 9, 24), (95, 29, 19, 10)); self.label(surface, "SHOP", (98, 32), (0, 222, 218))
+        pygame.draw.rect(surface, (0, 222, 218), (84, 18, 43, 27), 1)
+        shop_prop = load_image("city/building-wide-a.png", (42, 38))
+        if shop_prop: surface.blit(shop_prop, (84, 8))
+        pygame.draw.rect(surface, (0, 222, 218), (91, 25, 27, 18)); pygame.draw.rect(surface, (12, 9, 24), (95, 29, 19, 10)); self.label(surface, "SHOP", (98, 32), (255, 236, 105))
         name_index = self.location_index % len(self.location_names)
         self.game.text(surface, f"GLIWICE // {self.location_names[name_index]}", (8, 6), 8, (0, 222, 218))
         self.game.text(surface, self.location_notes[name_index], (232, 6), 6, (255, 178, 71))
@@ -136,3 +141,6 @@ class OverworldState:
             self.game.text(surface, self.location_names[(self.location_index + 1) % len(self.location_names)], (269, 92), 5, (0, 222, 218))
             self.game.text(surface, "E", (286, 106), 8, (255, 236, 105))
         self.game.draw_hud(surface); self.game.text(surface, self.story_lines[name_index], (104, 158), 5, (255, 178, 71)); self.game.text(surface, "E HQ / SHOP / EXIT", (8, 160), 6, (0, 222, 218)); self.game.text(surface, "WASD / ARROWS MOVE", (8, 171), 7, (255, 236, 105))
+        if self.tutorial:
+            shade = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA); shade.fill((5, 4, 18, 185)); surface.blit(shade, (0, 0)); pygame.draw.rect(surface, (255, 37, 116), (36, 34, 248, 108), 2)
+            self.game.text(surface, "NIGHT SHIFT // QUICK TUTORIAL", (62, 45), 9, (255, 236, 105)); self.game.text(surface, "WASD / ARROWS   MOVE", (72, 64), 7, COLORS["paper"]); self.game.text(surface, "E near HQ / SHOP / EXIT", (72, 78), 7, (0, 222, 218)); self.game.text(surface, "LMB shoot   J/K melee   L special", (54, 92), 7, COLORS["paper"]); self.game.text(surface, "Clear the street, then follow NEXT.", (62, 108), 7, (255, 178, 71)); self.game.text(surface, "PRESS ANY KEY", (111, 128), 7, (255, 37, 116))
