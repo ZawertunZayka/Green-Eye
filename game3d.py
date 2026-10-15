@@ -99,11 +99,11 @@ class HybridGame:
         self.enemies.clear()
         # Continuous grass base and asphalt underlays keep the city readable even
         # where individual road-kit meshes have small tile gaps.
-        # Textured planes are the guaranteed visible base: grass first, then
-        # two continuous road bands.  The detailed 3D road meshes sit above it.
-        self.add(Entity(model="plane", position=(0, -.25, 0), scale=(100, 100), texture=GRASS_TEXTURE, texture_scale=(80, 80), shader=unlit_shader, color=color.white, double_sided=True))
-        self.add(Entity(model="plane", position=(0, -.01, 0), scale=(66, 8.2), texture=ROAD_TEXTURE, texture_scale=(18, 3), shader=unlit_shader, color=color.white, double_sided=True))
-        self.add(Entity(model="plane", position=(0, -.005, 0), scale=(8.2, 52), rotation_y=90, texture=ROAD_TEXTURE, texture_scale=(14, 3), shader=unlit_shader, color=color.white, double_sided=True))
+        # Thin horizontal cubes are used instead of planes: in Ursina this makes
+        # the XZ orientation explicit, so the green field always fills the map.
+        self.add(Entity(model="cube", position=(0, -.30, 0), scale=(120, .6, 120), texture=GRASS_TEXTURE, texture_scale=(80, 80), shader=unlit_shader, color=color.white))
+        self.add(Entity(model="cube", position=(0, -.005, 0), scale=(66, .08, 8.2), texture="white_cube", shader=unlit_shader, color=color.rgb(48, 51, 61)))
+        self.add(Entity(model="cube", position=(0, 0, 0), scale=(8.2, .08, 52), texture="white_cube", shader=unlit_shader, color=color.rgb(48, 51, 61)))
         # Real road GLBs, not flat Python rectangles.
         for x in range(-24, 25, 4): self.add(Entity(model=road("road-straight"), position=(x, .03, 0), scale=2.2))
         for z in range(-20, 21, 4): self.add(Entity(model=road("road-straight"), position=(0, .04, z), rotation_y=90, scale=2.2))
