@@ -100,6 +100,9 @@ class HybridGame:
         self.vehicle_time = 0.0
         self.car_collision_cooldown = 0.0
         self.animation_time = 0.0
+        self.konami_sequence = ("up", "up", "down", "down", "left", "right", "left", "right", "b", "a")
+        self.konami_buffer: list[str] = []
+        self.rgb_mode = False
         self.enemies: list[dict] = []
         self.attack_effects: list[Entity] = []
         self.projectiles: list[dict] = []
@@ -724,6 +727,22 @@ class HybridGame:
                 vehicle.y = (.5 if vehicle is self.car_entity else .45) + math.sin(self.animation_time * 2.0 + index) * .008
         self._last_actor_position = Vec3(actor.position)
 
+    def activate_konami(self) -> None:
+        """Secret code: rainbow player and a large emergency health pool."""
+        self.max_hp = 1000
+        self.player_hp = 1000
+        self.rgb_mode = True
+        self.refresh_player_hud()
+        self.notice.text = "KONAMI CLEANUP // RGB MODE // HP 1000"
+        self.notice.enabled = self.notice_bg.enabled = True
+
+    def update_rgb_player(self) -> None:
+        if not self.rgb_mode or not self.avatar:
+            return
+        phase = self.animation_time * 2.8
+        rgb = tuple(int(128 + 127 * math.sin(phase + offset)) for offset in (0, 2.1, 4.2))
+        self.avatar.color = color.rgb32(*rgb)
+
     def update_target_lock(self) -> None:
         if self.locked_enemy and self.locked_enemy["dead"]:
             self.set_target_lock(self.nearest_enemy())
@@ -983,6 +1002,7 @@ class HybridGame:
             self.update_intro(dt)
             return
         if self.state != "PLAY": return
+        self.update_rgb_player()
         self.attack_cooldown = max(0.0, self.attack_cooldown - dt)
         self.damage_cooldown = max(0.0, self.damage_cooldown - dt)
         self.car_collision_cooldown = max(0.0, self.car_collision_cooldown - dt)
@@ -1056,6 +1076,12 @@ class HybridGame:
         self.update_visual_animations(dt, actor)
 
     def input(self, key):
+        if key in self.konami_sequence:
+            self.konami_buffer.append(key)
+            self.konami_buffer = self.konami_buffer[-len(self.konami_sequence):]
+            if tuple(self.konami_buffer) == self.konami_sequence:
+                self.konami_buffer.clear()
+                self.activate_konami()
         if self.state == "INTRO": self.finish_intro()
         elif self.state == "MENU" and key in ("enter", "left mouse down"): self.start()
         elif self.state == "PLAY":
