@@ -97,6 +97,17 @@ User-provided assets are kept under `assets/user/` and are never overwritten by 
 
 The Gliwice map is used as the menu/map reference. Missing or incompatible nature tree materials are avoided by using textured City Kit tree models for visible trees.
 
+## Project media
+
+The repository also includes a small meme-cat image and a compressed gameplay recording:
+
+![Meme cat](assets/user/media/meme-cat.jpg)
+
+- [Gameplay recording (MP4)](assets/user/media/gameplay-video.mp4)
+- [Meme cat image (JPG)](assets/user/media/meme-cat.jpg)
+
+The original phone recording is kept outside the repository because it is 533 MB, above GitHub's 100 MB regular-file limit. `gameplay-video.mp4` is a GitHub-compatible 480p copy; the original file was not modified.
+
 ## Saving and troubleshooting
 
 - Delete `save.json` only if you intentionally want to reset coins, XP and unlocked weapons.
