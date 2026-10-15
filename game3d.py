@@ -81,6 +81,9 @@ class HybridGame:
         self.intro_hero: Entity | None = None
         self.avatar: Entity | None = None
         self.in_car = True
+        self.max_hp = 100
+        self.player_hp = self.max_hp
+        self.damage_cooldown = 0.0
         self.attack_cooldown = 0.0
         self.fight_banner_time = 0.0
         self.story_queue: list[str] = []
@@ -140,6 +143,19 @@ class HybridGame:
         self.shop_text = Text("", parent=camera.ui, origin=(0, 0), y=.03, z=-.1, scale=1, color=CYAN, enabled=False)
         self.win_panel = Entity(parent=camera.ui, model="quad", color=color.rgba32(8, 6, 18, 250), scale=(.72, .62), enabled=False)
         self.win_text = Text("", parent=camera.ui, origin=(0, 0), y=.04, z=-.1, scale=1, color=YELLOW, enabled=False)
+        self.hp_bg = Entity(parent=camera.ui, model="quad", origin=(-.5, 0), position=(-.47, .425),
+                            scale=(.25, .025), color=color.rgba32(20, 12, 24, 235), enabled=False)
+        self.hp_fill = Entity(parent=camera.ui, model="quad", origin=(-.5, 0), position=(-.465, .425),
+                              scale=(.24, .015), color=PINK, enabled=False)
+        self.hp_text = Text("HP 100 / 100", parent=camera.ui, position=(-.465, .455), scale=.58,
+                            color=color.white, enabled=False)
+        self.minimap = Entity(parent=camera.ui, model="quad", position=(.405, .33), scale=(.19, .24),
+                              color=color.rgba32(8, 12, 24, 225), enabled=False)
+        Entity(parent=self.minimap, model="quad", scale=(.94, .17), color=color.rgb32(62, 66, 78), z=-.02)
+        Entity(parent=self.minimap, model="quad", scale=(.17, .94), color=color.rgb32(62, 66, 78), z=-.02)
+        self.minimap_player = Entity(parent=self.minimap, model="circle", scale=.085, color=CYAN, z=-.05)
+        self.minimap_exit = Entity(parent=self.minimap, model="quad", position=(.44, 0, -.04), scale=(.035, .18), color=YELLOW)
+        self.minimap_enemy_dots: list[Entity] = []
 
     def add(self, entity):
         self.scene_entities.append(entity)
@@ -263,6 +279,47 @@ class HybridGame:
         self.boss_name.enabled = visible
         if boss:
             self.boss_bar_fill.scale_x = .58 * max(0, boss["hp"]) / boss["max_hp"]
+
+    def refresh_player_hud(self):
+        ratio = max(0, self.player_hp) / self.max_hp
+        self.hp_fill.scale_x = .24 * ratio
+        self.hp_fill.color = PINK if ratio > .3 else color.red
+        self.hp_text.text = f"HP {max(0, self.player_hp)} / {self.max_hp}"
+
+    def refresh_minimap(self):
+        while len(self.minimap_enemy_dots) < len(self.enemies):
+            self.minimap_enemy_dots.append(Entity(parent=self.minimap, model="circle", scale=.065, color=PINK, z=-.05))
+        actor = self.car_entity if self.in_car else self.avatar
+        self.minimap_player.position = (actor.x / 60, -actor.z / 48, -.05)
+        self.minimap_player.color = YELLOW if self.in_car else CYAN
+        self.minimap_exit.enabled = self.street < 2 and all(enemy["dead"] for enemy in self.enemies)
+        for index, dot in enumerate(self.minimap_enemy_dots):
+            if index >= len(self.enemies):
+                dot.enabled = False
+                continue
+            enemy = self.enemies[index]
+            dot.enabled = not enemy["dead"]
+            dot.position = (enemy["entity"].x / 60, -enemy["entity"].z / 48, -.05)
+            dot.color = YELLOW if enemy["kind"] == "zsti_boss" else PINK
+
+    def damage_player(self, amount):
+        if self.damage_cooldown > 0 or self.in_car or self.state != "PLAY":
+            return
+        self.player_hp = max(0, self.player_hp - amount)
+        self.damage_cooldown = .8
+        self.avatar.animate_color(color.red, duration=.05)
+        invoke(self.avatar.animate_color, color.white, delay=.12, duration=.12)
+        self.refresh_player_hud()
+        if self.player_hp <= 0:
+            self.game_over()
+
+    def game_over(self):
+        self.hide_ui()
+        self.state = "GAME_OVER"
+        self.set_target_lock(None)
+        self.win_panel.enabled = self.win_text.enabled = True
+        self.win_text.color = PINK
+        self.win_text.text = "THE CITY IS STILL MESSY...\n\nThe cleanup crew needs another try.\n\nENTER  RETRY THIS STREET\nESC  MENU"
 
     def show_story(self):
         if not self.story_queue:
@@ -497,6 +554,10 @@ class HybridGame:
         self.state = "PLAY"
         for item in (self.intro, self.map_panel, self.menu_card, self.menu, self.quest_panel, self.quest_text, self.shop_panel, self.shop_text, self.win_panel, self.win_text): item.enabled = False
         self.fight_banner.enabled = False
+        self.hp_bg.enabled = self.hp_fill.enabled = self.hp_text.enabled = True
+        self.minimap.enabled = True
+        self.refresh_player_hud()
+        self.refresh_minimap()
         self.refresh_boss_bar()
         if self.story_queue:
             self.show_story()
@@ -508,6 +569,7 @@ class HybridGame:
                      self.hud_bg, self.hud, self.help_bg, self.help,
                      self.objective_bg, self.objective, self.notice_bg, self.notice,
                      self.story_bg, self.story_text, self.boss_bar_bg, self.boss_bar_fill, self.boss_name,
+                     self.hp_bg, self.hp_fill, self.hp_text, self.minimap,
                      self.fight_banner, self.quest_panel, self.quest_text,
                      self.shop_panel, self.shop_text, self.win_panel, self.win_text):
             item.enabled = False
@@ -555,6 +617,7 @@ class HybridGame:
         self.hud.enabled = False; self.help.enabled = False; self.notice.enabled = False; self.objective_bg.enabled = False; self.objective.enabled = False
         self.fight_banner.enabled = False
         self.win_panel.enabled = True; self.win_text.enabled = True
+        self.win_text.color = YELLOW
         self.win_text.text = "THE PRINCIPAL IS DEFEATED!\n\nGliwice can breathe again.\nEverything is tidy.\n\nCOINS %d   XP %d\n\nENTER  PLAY AGAIN" % (self.coins, self.xp)
 
     def open_quest(self):
@@ -581,6 +644,7 @@ class HybridGame:
             return
         if self.state != "PLAY": return
         self.attack_cooldown = max(0.0, self.attack_cooldown - dt)
+        self.damage_cooldown = max(0.0, self.damage_cooldown - dt)
         if self.fight_banner_time > 0:
             self.fight_banner_time -= dt
             if self.fight_banner_time <= 0: self.fight_banner.enabled = False
@@ -621,6 +685,11 @@ class HybridGame:
             delta = actor.position - enemy["entity"].position
             delta.y = 0
             if delta.length() > 3 and delta.length() < 16: self.move_actor(enemy["entity"], delta.normalized() * 1.2 * dt, .4)
+            elif not self.in_car and delta.length() < 1.25:
+                self.damage_player(20 if enemy["kind"] == "zsti_boss" else 12)
+                if self.state != "PLAY":
+                    return
+        self.refresh_minimap()
         self.refresh_prompt()
 
     def input(self, key):
@@ -694,6 +763,15 @@ class HybridGame:
             if key == "enter":
                 self.street = 0; self.build_street(); self.start()
             elif key == "escape": self.show_menu()
+        elif self.state == "GAME_OVER":
+            if key == "enter":
+                self.player_hp = self.max_hp
+                self.damage_cooldown = 0
+                self.build_street()
+                self.start()
+            elif key == "escape":
+                self.player_hp = self.max_hp
+                self.show_menu()
 
     def run(self): app.run()
 
