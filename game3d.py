@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import math
+import random
 from pathlib import Path
 from ursina import *
 from ursina.shaders import unlit_shader
@@ -52,6 +53,14 @@ def skeleton(name):
 class HybridGame:
     """3D street layer with the project's 2D-style HUD and quest prompts."""
     LEVEL_NAMES = ("ZWYCIESTWA", "DWORCOWA", "ZSTI SCHOOL")
+    UPGRADES = (
+        ("power", "HEAVY PAN", "+1 projectile damage"),
+        ("vitality", "BIG LUNCH", "+20 maximum HP and heal 20"),
+        ("speed", "QUICK SHOES", "+12% walking and running speed"),
+        ("rapid", "FAST HANDS", "+15% firing speed"),
+        ("armor", "THICK APRON", "Take 15% less damage"),
+        ("heal", "WARM SOUP", "Restore 35 HP now"),
+    )
     STORY = (
         "A cleanup call arrives. Clear the street and follow the road east.",
         "A dropped note points farther east: ZSTI. Someone is waiting there.",
@@ -70,6 +79,7 @@ class HybridGame:
          ("boss_guard", (16, 0, -6), color.orange, "Mage", 3), ("boss_guard", (16, 0, 6), PINK, "Warrior", 3)),
     )
     def __init__(self):
+        camera.fov = 65
         self.state = "INTRO"
         self.intro_time = 0.0
         self.street = 0
@@ -90,6 +100,11 @@ class HybridGame:
         self.in_car = True
         self.max_hp = 100
         self.player_hp = self.max_hp
+        self.damage_bonus = 0
+        self.move_multiplier = 1.0
+        self.attack_delay = .28
+        self.damage_multiplier = 1.0
+        self.upgrade_choices: list[tuple[str, str, str]] = []
         self.damage_cooldown = 0.0
         self.attack_cooldown = 0.0
         self.fight_banner_time = 0.0
@@ -150,6 +165,17 @@ class HybridGame:
         self.shop_text = Text("", parent=camera.ui, origin=(0, 0), y=.03, z=-.1, scale=1, color=CYAN, enabled=False)
         self.win_panel = Entity(parent=camera.ui, model="quad", color=color.rgba32(8, 6, 18, 250), scale=(.72, .62), enabled=False)
         self.win_text = Text("", parent=camera.ui, origin=(0, 0), y=.04, z=-.1, scale=1, color=YELLOW, enabled=False)
+        self.upgrade_overlay = Entity(parent=camera.ui, model="quad", scale=(2, 1), color=color.rgba32(5, 7, 15, 220), enabled=False)
+        self.upgrade_title = Text("CHOOSE A CLEANUP BONUS", parent=camera.ui, origin=(0, 0), y=.32,
+                                  z=-.2, scale=1.25, color=YELLOW, enabled=False)
+        self.upgrade_cards: list[Button] = []
+        for index, x in enumerate((-.34, 0, .34)):
+            card = Button(parent=camera.ui, model="quad", position=(x, -.02, -.2), scale=(.29, .48),
+                          color=color.rgb32(22, 30, 48), highlight_color=color.rgb32(35, 65, 78),
+                          pressed_color=color.rgb32(18, 105, 105), text="", text_color=color.white,
+                          enabled=False)
+            card.on_click = Func(self.choose_upgrade, index)
+            self.upgrade_cards.append(card)
         self.hp_bg = Entity(parent=camera.ui, model="quad", origin=(-.5, 0), position=(-.47, .425),
                             scale=(.25, .025), color=color.rgba32(20, 12, 24, 235), enabled=False)
         self.hp_fill = Entity(parent=camera.ui, model="quad", origin=(-.5, 0), position=(-.465, .425),
@@ -312,7 +338,7 @@ class HybridGame:
     def damage_player(self, amount):
         if self.damage_cooldown > 0 or self.in_car or self.state != "PLAY":
             return
-        self.player_hp = max(0, self.player_hp - amount)
+        self.player_hp = max(0, self.player_hp - max(1, round(amount * self.damage_multiplier)))
         self.damage_cooldown = .8
         self.avatar.animate_color(color.red, duration=.05)
         invoke(self.avatar.animate_color, color.white, delay=.12, duration=.12)
@@ -417,7 +443,7 @@ class HybridGame:
         entity = target["entity"]
         if target["dead"]:
             return
-        target["hp"] -= 1 + self.weapon_level
+        target["hp"] -= 1 + self.weapon_level + self.damage_bonus
         direction = entity.position - self.avatar.position
         direction.y = 0
         if direction.length():
@@ -434,6 +460,36 @@ class HybridGame:
             self.coins += 5; self.xp += 10; self.save()
             if self.street == 2 and all(enemy["dead"] for enemy in self.enemies):
                 self.win_game()
+            else:
+                self.offer_upgrades()
+
+    def offer_upgrades(self):
+        self.state = "UPGRADE"
+        self.upgrade_choices = random.sample(self.UPGRADES, 3)
+        self.upgrade_overlay.enabled = self.upgrade_title.enabled = True
+        for index, (card, (_, title, description)) in enumerate(zip(self.upgrade_cards, self.upgrade_choices)):
+            card.text = f"{index + 1}\n\n{title}\n\n{description}"
+            card.enabled = True
+
+    def choose_upgrade(self, index):
+        if self.state != "UPGRADE" or not 0 <= index < len(self.upgrade_choices):
+            return
+        key = self.upgrade_choices[index][0]
+        if key == "power":
+            self.damage_bonus += 1
+        elif key == "vitality":
+            self.max_hp += 20
+            self.player_hp = min(self.max_hp, self.player_hp + 20)
+        elif key == "speed":
+            self.move_multiplier *= 1.12
+        elif key == "rapid":
+            self.attack_delay = max(.11, self.attack_delay * .85)
+        elif key == "armor":
+            self.damage_multiplier = max(.4, self.damage_multiplier * .85)
+        elif key == "heal":
+            self.player_hp = min(self.max_hp, self.player_hp + 35)
+        self.upgrade_choices.clear()
+        self.start()
 
     def spawn_projectile(self, aim_point: Vec3) -> None:
         start = self.avatar.position + Vec3(0, 1.1, 0)
@@ -628,6 +684,7 @@ class HybridGame:
                      self.objective_bg, self.objective, self.notice_bg, self.notice,
                      self.story_bg, self.story_text, self.boss_bar_bg, self.boss_bar_fill, self.boss_name,
                      self.hp_bg, self.hp_fill, self.hp_text, self.minimap,
+                     self.upgrade_overlay, self.upgrade_title, *self.upgrade_cards,
                      self.fight_banner, self.quest_panel, self.quest_text,
                      self.shop_panel, self.shop_text, self.win_panel, self.win_text):
             item.enabled = False
@@ -693,7 +750,7 @@ class HybridGame:
         self.state = "SHOP"
         self.shop_panel.enabled = True; self.shop_text.enabled = True; self.hud_bg.enabled = False; self.help_bg.enabled = False; self.notice_bg.enabled = False; self.hud.enabled = False; self.help.enabled = False; self.objective_bg.enabled = False; self.objective.enabled = False
         offer = "Maximum upgrade reached" if self.weapon_level == 3 else "P  Upgrade damage - 30 coins"
-        self.shop_text.text = f"SHOP\n\nDamage: {1 + self.weapon_level}\nCoins: {self.coins}\n\n{offer}\n\nE / Esc  Close"
+        self.shop_text.text = f"SHOP\n\nDamage: {1 + self.weapon_level + self.damage_bonus}\nCoins: {self.coins}\n\n{offer}\n\nE / Esc  Close"
 
     def update(self, dt):
         dt = max(0.0, min(dt, .05))
@@ -728,7 +785,7 @@ class HybridGame:
             direction = Vec3(held_keys["d"] - held_keys["a"], 0, held_keys["w"] - held_keys["s"])
             if direction.length() and actor:
                 running = held_keys["shift"] or held_keys["left shift"] or held_keys["right shift"]
-                walk_speed = 7.2 if running else 4.5
+                walk_speed = (7.2 if running else 4.5) * self.move_multiplier
                 self.move_actor(actor, direction.normalized() * walk_speed * dt, .45)
                 actor.x = clamp(actor.x, -28, 28); actor.z = clamp(actor.z, -22, 22)
                 # While walking, face the direction of travel.
@@ -772,7 +829,7 @@ class HybridGame:
                     self.notice.text = "E EXIT CAR TO START A CLEANUP FIGHT"
                     return
                 if self.attack_cooldown > 0: return
-                self.attack_cooldown = .28
+                self.attack_cooldown = self.attack_delay
                 aim_point = self.locked_enemy["entity"].position if self.locked_enemy and not self.locked_enemy["dead"] else self.get_mouse_aim_point()
                 aim = aim_point - self.avatar.position
                 aim.y = 0
@@ -819,9 +876,14 @@ class HybridGame:
                 elif self.coins < 30:
                     self.open_shop()
                     self.shop_text.text += "\nNot enough coins"
+        elif self.state == "UPGRADE" and key in ("1", "2", "3"):
+            self.choose_upgrade(int(key) - 1)
         elif self.state == "WIN":
             if key == "enter":
-                self.street = 0; self.build_street(); self.start()
+                self.street = 0
+                self.max_hp = 100; self.player_hp = 100; self.damage_bonus = 0
+                self.move_multiplier = 1.0; self.attack_delay = .28; self.damage_multiplier = 1.0
+                self.build_street(); self.start()
             elif key == "escape": self.show_menu()
         elif self.state == "GAME_OVER":
             if key == "enter":
@@ -851,6 +913,7 @@ def input(key):
 def create_app():
     global app, game
     app = Ursina(borderless=False, development_mode=False)
+    camera.fov = 65
     window.title = "Green-Eye // Gliwice 3D Streets"; window.color = color.rgb32(28, 72, 38); scene.fog_color = color.rgb32(28, 72, 38)
     AmbientLight(color=color.rgb32(55, 55, 55))
     DirectionalLight(rotation=(45, -45, 45), color=color.rgb32(85, 85, 85))
