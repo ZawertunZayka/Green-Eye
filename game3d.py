@@ -369,10 +369,6 @@ class HybridGame:
                 actor.x = clamp(actor.x, -28, 28); actor.z = clamp(actor.z, -22, 22)
                 # While walking, face the direction of travel.
                 actor.rotation_y = math.degrees(math.atan2(direction.x, direction.z))
-            elif actor:
-                # Keep the original idle-facing behavior.
-                to_car = self.car_entity.position - actor.position
-                actor.rotation_y = math.degrees(math.atan2(to_car.x, to_car.z))
             if actor and self.locked_enemy and not self.locked_enemy["dead"]:
                 to_target = self.locked_enemy["entity"].position - actor.position
                 to_target.y = 0
