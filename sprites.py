@@ -9,10 +9,13 @@ def draw_person(surface: pygame.Surface, x: int, y: int, facing: int = 1,
     # Use the supplied walk-pack when available; the procedural drawing below
     # remains the safe fallback for any missing frame or future character type.
     asset_kind = {"girl": "runner", "thug": "bruiser", "teen": "punk", "dealer": "businessman"}.get(kind)
-    if asset_kind and not flash:
+    if asset_kind:
         frame = (pygame.time.get_ticks() // 130) % 4
         image = load_image(f"walk/{asset_kind}/south/{frame:02d}.png", (32 * scale, 32 * scale))
         if image:
+            if flash:
+                image = image.copy()
+                image.fill((255, 255, 255, 190), special_flags=pygame.BLEND_RGBA_ADD)
             surface.blit(image, (x - 16 * scale, y - 31 * scale))
             return
     if kind == "girl":

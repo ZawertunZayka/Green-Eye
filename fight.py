@@ -60,12 +60,22 @@ class FightState:
         if won: self.enemy_ref["done"] = True; self.game.complete_enemy(self.spec.name); self.game.manager.change("OVERWORLD")
         else: self.game.manager.change("GAME_OVER")
     def draw(self, surface: pygame.Surface) -> None:
-        c = COLORS; surface.fill(c["pink"]); pygame.draw.rect(surface, c["orange"], (0, 45, WIDTH, 105)); pygame.draw.rect(surface, c["brown"], (0, 145, WIDTH, 35))
-        pygame.draw.rect(surface, c["yellow"], (18, 62, 284, 2)); self.bar(surface, 12, 12, 115, self.hero.hp/self.hero.max_hp, c["green"]); self.bar(surface, 193, 12, 115, self.foe.hp/self.foe.max_hp, c["red"])
+        c = COLORS
+        surface.fill((20, 13, 35))
+        pygame.draw.rect(surface, (45, 19, 67), (0, 45, WIDTH, 100))
+        pygame.draw.rect(surface, (11, 9, 22), (0, 145, WIDTH, 35))
+        for x in range(-20, WIDTH + 20, 24):
+            pygame.draw.line(surface, (84, 26, 91), (x, 145), (x + 18, 180), 1)
+        for y in range(148, 180, 8): pygame.draw.line(surface, (48, 22, 66), (0, y), (WIDTH, y), 1)
+        pygame.draw.line(surface, (255, 48, 117), (0, 144), (WIDTH, 144), 2)
+        pygame.draw.rect(surface, (0, 221, 217), (18, 62, 284, 2))
+        self.bar(surface, 12, 12, 115, self.hero.hp/self.hero.max_hp, (0, 232, 190)); self.bar(surface, 193, 12, 115, self.foe.hp/self.foe.max_hp, (255, 52, 93))
         self.game.text(surface, "MAMA", (14, 25), 7, c["paper"]); self.game.text(surface, self.spec.name.upper(), (190, 25), 6, c["paper"]); self.game.text(surface, f"R{self.round_no}  {max(0,int(self.timer)):02d}", (145, 8), 7, c["ink"])
         draw_person(surface, int(self.hero.x), int(self.hero.y), facing=1, kind="girl", scale=2, flash=self.hit_stop > 0); draw_person(surface, int(self.foe.x), int(self.foe.y), facing=-1, kind=self.spec.color, scale=2, flash=self.hit_stop > 0)
         if self.shake: self.shake -= 1; star_burst(surface, int(self.foe.x), 105, self.shake)
-        if self.banner_time: self.game.text(surface, self.banner, (104, 40), 14, c["yellow"])
+        if self.banner_time:
+            pygame.draw.rect(surface, (255, 41, 103), (84, 38, 152, 22), 2)
+            self.game.text(surface, self.banner, (104, 40), 14, (255, 236, 105))
         if self.message: self.game.text(surface, self.message, (112, 157), 8, c["paper"])
         self.game.text(surface, "A/D move  J punch  K kick  L special  SPACE block", (16, 171), 6, c["paper"])
     @staticmethod
