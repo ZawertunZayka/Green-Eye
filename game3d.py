@@ -108,6 +108,8 @@ class GreenEye:
         for enemy in self.enemies:
             destroy(enemy.entity)
         self.world.clear(); self.enemies.clear()
+        # Keep the scene visible even on drivers that ignore the window clear color.
+        self.world.append(Entity(model="cube", position=(0, -2, 0), scale=(100, .2, 100), color=INK))
         self.world.append(Entity(model="plane", scale=(42, 1, 28), color=ROAD))
         self.world.append(Entity(model="cube", position=(0, .02, 0), scale=(42, .08, 3), color=color.rgb(52, 42, 70)))
         self.world.append(Entity(model="cube", position=(0, .03, 0), scale=(3, .09, 28), color=color.rgb(52, 42, 70)))
@@ -232,7 +234,7 @@ def input(key):
 def create_app():
     global app, game
     app = Ursina(borderless=False, development_mode=False)
-    window.title = "Green-Eye // Gliwice Cleanup"; window.color = INK; window.fps_counter.enabled = True
+    window.title = "Green-Eye // Gliwice Cleanup"; window.color = INK; scene.fog_color = INK; window.fps_counter.enabled = True
     game = GreenEye(); app.run()
 
 
