@@ -250,8 +250,10 @@ class HybridGame:
             if direction.length() and actor:
                 actor.position += direction.normalized() * 4.5 * dt
                 actor.x = clamp(actor.x, -28, 28); actor.z = clamp(actor.z, -22, 22)
-            if actor:
-                # Keep the character facing the parked car while walking.
+                # While walking, face the direction of travel.
+                actor.rotation_y = math.degrees(math.atan2(direction.x, direction.z))
+            elif actor:
+                # When idle, keep looking back at the car.
                 to_car = self.car_entity.position - actor.position
                 actor.rotation_y = math.degrees(math.atan2(to_car.x, to_car.z))
         camera.position = lerp(camera.position, actor.position + Vec3(0, 11 if not self.in_car else 17, -16 if not self.in_car else -18), dt * 4)
