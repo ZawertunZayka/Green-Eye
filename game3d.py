@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from ursina import *
 from ursina.shaders import unlit_shader
@@ -246,6 +247,10 @@ class HybridGame:
             if direction.length() and actor:
                 actor.position += direction.normalized() * 4.5 * dt
                 actor.x = clamp(actor.x, -28, 28); actor.z = clamp(actor.z, -22, 22)
+            if actor:
+                # Keep the character facing the parked car while walking.
+                to_car = self.car_entity.position - actor.position
+                actor.rotation_y = math.degrees(math.atan2(to_car.x, to_car.z))
         camera.position = lerp(camera.position, actor.position + Vec3(0, 11 if not self.in_car else 17, -16 if not self.in_car else -18), dt * 4)
         camera.look_at(actor.position + Vec3(0, 1.2 if not self.in_car else 0, 1))
         for enemy in self.enemies:
