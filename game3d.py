@@ -97,10 +97,10 @@ class HybridGame:
         self.enemies.clear()
         # Continuous grass base and asphalt underlays keep the city readable even
         # where individual road-kit meshes have small tile gaps.
-        base = dict(texture="white_cube", shader=unlit_shader, double_sided=True)
-        self.add(Entity(model="plane", position=(0, -.32, 0), scale=(100, 100), color=color.rgb(42, 112, 58), **base))
-        self.add(Entity(model="cube", position=(0, -.06, 0), scale=(66, .12, 8.2), color=color.rgb(48, 51, 61), **base))
-        self.add(Entity(model="cube", position=(0, -.05, 0), scale=(8.2, .12, 52), color=color.rgb(48, 51, 61), **base))
+        base = dict(texture="white_cube", double_sided=True)
+        self.add(Entity(model="cube", position=(0, -.25, 0), scale=(120, .5, 120), color=color.rgb(42, 112, 58), **base))
+        self.add(Entity(model="cube", position=(0, .0, 0), scale=(66, .2, 8.2), color=color.rgb(48, 51, 61), **base))
+        self.add(Entity(model="cube", position=(0, .0, 0), scale=(8.2, .2, 52), color=color.rgb(48, 51, 61), **base))
         # Real road GLBs, not flat Python rectangles.
         for x in range(-24, 25, 4): self.add(Entity(model=road("road-straight"), position=(x, .03, 0), scale=2.2))
         for z in range(-20, 21, 4): self.add(Entity(model=road("road-straight"), position=(0, .04, z), rotation_y=90, scale=2.2))
@@ -257,9 +257,9 @@ def input(key):
 def create_app():
     global app, game
     app = Ursina(borderless=False, development_mode=False)
-    window.title = "Green-Eye // Gliwice 3D Streets"; window.color = NIGHT; scene.fog_color = NIGHT
-    AmbientLight(color=color.rgba(110, 110, 110, 1))
-    DirectionalLight(rotation=(45, -45, 45), color=color.rgba(150, 150, 150, 1))
+    window.title = "Green-Eye // Gliwice 3D Streets"; window.color = color.rgb(28, 72, 38); scene.fog_color = color.rgb(28, 72, 38)
+    AmbientLight(color=color.rgba(55, 55, 55, 1))
+    DirectionalLight(rotation=(45, -45, 45), color=color.rgba(85, 85, 85, 1))
     game = HybridGame(); game.run()
 
 
