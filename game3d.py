@@ -861,6 +861,8 @@ class HybridGame:
                         ("tree-small", (-20, 0, 16), 1.1), ("tree-small", (22, 0, 16), 1.1),
                         ("planter", (-18, 0, -7), 1.2), ("planter", (18, 0, 7), 1.2))
         for name, pos, size in city_details:
+            if name.startswith("tree-"):
+                size *= 1.35
             self.add(Entity(model=city(name), position=pos, scale=size))
         # The optional nature pack contains several tree GLBs whose material
         # references are absent on some installations.  Those render white.
@@ -873,7 +875,7 @@ class HybridGame:
             ("tree-small", (-27, 0, 16), 1.3), ("tree-large", (27, 0, 16), 1.3),
         )
         for name, pos, size in tree_details:
-            self.add(Entity(model=city(name), position=pos, scale=size))
+            self.add(Entity(model=city(name), position=pos, scale=size * 1.35))
         nature_details = (
             ("grass_1", (-8, 0, 8), 2.8), ("grass_2", (-3, 0, 8), 2.8), ("bush_1", (8, 0, 8), 2.4),
             ("flowers_1", (12, 0, 8), 2.2), ("fern", (-12, 0, 8), 2.0), ("grass_1", (18, 0, 7), 2.6),
