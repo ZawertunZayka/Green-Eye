@@ -137,7 +137,8 @@ class GreenEye:
         positions = [(-11, .8, -5), (10, .8, 6), (14, .8, -5)]
         kinds = [["THUG", "TEEN", "DEALER"], ["TEEN", "THUG", "DEALER"], ["THUG", "THUG", "TEEN"], ["DEALER", "TEEN", "THUG"], ["DEALER", "THUG", "DEALER"]][self.location % 5]
         self.enemies = [Enemy(self, kind, pos) for kind, pos in zip(kinds, positions)]
-        camera.position = (0, 24, -19); camera.rotation_x = 55
+        camera.position = (0, 24, -19)
+        camera.look_at(Vec3(0, 0, 0))
 
     def show_menu(self):
         self.state = "MENU"
@@ -198,6 +199,7 @@ class GreenEye:
         self.player.x = clamp(self.player.x, -19, 19); self.player.z = clamp(self.player.z, -12, 12)
         for enemy in self.enemies: enemy.update(dt)
         camera.position = lerp(camera.position, Vec3(self.player.x, 24, self.player.z - 19), dt * 3)
+        camera.look_at(Vec3(self.player.x, 0, self.player.z))
         self.refresh_hud()
 
     def input(self, key):
