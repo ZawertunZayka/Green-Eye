@@ -12,6 +12,8 @@ CARS = "assets/user/3d_city/Models/Cars/GLB"
 ROADS = "assets/user/3d_city/Models/Roads/GLB"
 CHARACTERS = "assets/user/3d_arcade/Models/OBJ format"
 NATURE = "assets/user/3d_nature/FULL_VERSION_ALL_MODELS/GLB"
+GRASS_TEXTURE = "assets/user/urban/tiles/tile_0002.png"
+ROAD_TEXTURE = "assets/user/3d_city/Models/Roads/Previews/road-straight.png"
 MAP = "assets/user/city/gliwice_map.png"
 WALK = "assets/user/walk"
 NIGHT = color.rgb(10, 12, 24)
@@ -97,10 +99,11 @@ class HybridGame:
         self.enemies.clear()
         # Continuous grass base and asphalt underlays keep the city readable even
         # where individual road-kit meshes have small tile gaps.
-        base = dict(texture="white_cube", double_sided=True)
-        self.add(Entity(model="cube", position=(0, -.25, 0), scale=(120, .5, 120), color=color.rgb(42, 112, 58), **base))
-        self.add(Entity(model="cube", position=(0, .0, 0), scale=(66, .2, 8.2), color=color.rgb(48, 51, 61), **base))
-        self.add(Entity(model="cube", position=(0, .0, 0), scale=(8.2, .2, 52), color=color.rgb(48, 51, 61), **base))
+        # Textured planes are the guaranteed visible base: grass first, then
+        # two continuous road bands.  The detailed 3D road meshes sit above it.
+        self.add(Entity(model="plane", position=(0, -.25, 0), scale=(100, 100), texture=GRASS_TEXTURE, texture_scale=(80, 80), shader=unlit_shader, color=color.white, double_sided=True))
+        self.add(Entity(model="plane", position=(0, -.01, 0), scale=(66, 8.2), texture=ROAD_TEXTURE, texture_scale=(18, 3), shader=unlit_shader, color=color.white, double_sided=True))
+        self.add(Entity(model="plane", position=(0, -.005, 0), scale=(8.2, 52), rotation_y=90, texture=ROAD_TEXTURE, texture_scale=(14, 3), shader=unlit_shader, color=color.white, double_sided=True))
         # Real road GLBs, not flat Python rectangles.
         for x in range(-24, 25, 4): self.add(Entity(model=road("road-straight"), position=(x, .03, 0), scale=2.2))
         for z in range(-20, 21, 4): self.add(Entity(model=road("road-straight"), position=(0, .04, z), rotation_y=90, scale=2.2))
