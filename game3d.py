@@ -60,6 +60,7 @@ class GreenEye3D:
         self.menu_card = Entity(parent=camera.ui, model="quad", color=color.rgba(8,6,18,220), scale=(.64,.86), enabled=False)
         self.start_text = Text("START CLEANUP", parent=camera.ui, origin=(0,0), y=-.05, scale=1.2, color=NEON_YELLOW, enabled=False)
         self.controls_text = Text("CONTROLS", parent=camera.ui, origin=(0,0), y=-.15, scale=1.0, color=color.white, enabled=False)
+        self.menu_prompt = Text("ENTER / CLICK  TO START 3D CITY", parent=camera.ui, origin=(0,0), y=-.38, scale=.9, color=NEON_PINK, enabled=False)
         self.shop_title = Text("NIGHT SHOP", parent=camera.ui, origin=(0,0), y=.3, scale=1.5, color=NEON_YELLOW, enabled=False)
         self.shop_text = Text("", parent=camera.ui, origin=(0,0), y=.05, scale=1.0, color=color.white, enabled=False)
     def clear_world(self):
@@ -101,9 +102,9 @@ class GreenEye3D:
     def spawn_sparks(self, position):
         for i in range(6): Entity(model="sphere", position=position+Vec3(random.uniform(-.5,.5),1,random.uniform(-.5,.5)), scale=.1, color=NEON_YELLOW, add_to_scene_entities=True)
     def show_menu(self):
-        self.state="MENU"; self.map_panel.enabled=True; self.menu_card.enabled=True; self.start_text.enabled=True; self.controls_text.enabled=True; self.title.enabled=False; self.subtitle.enabled=False; self.hud.enabled=False; self.help.enabled=False
+        self.state="MENU"; self.map_panel.enabled=True; self.menu_card.enabled=True; self.start_text.enabled=True; self.controls_text.enabled=True; self.menu_prompt.enabled=True; self.title.enabled=False; self.subtitle.enabled=False; self.hud.enabled=False; self.help.enabled=False
     def hide_menu(self):
-        for ui in (self.map_panel,self.menu_card,self.start_text,self.controls_text): ui.enabled=False
+        for ui in (self.map_panel,self.menu_card,self.start_text,self.controls_text,self.menu_prompt): ui.enabled=False
     def show_shop(self):
         self.state="SHOP"; self.shop_title.enabled=True; self.shop_text.enabled=True; self.shop_text.text="PAN POWER  $30  (P)\nHEART +20 HP  $25  (H)\nAMMO +10  $40  (A)\n\nE buy    ESC close"; self.hide_hud()
     def hide_hud(self): self.hud.enabled=False; self.help.enabled=False
@@ -138,7 +139,7 @@ class GreenEye3D:
         if all(enemy.hp <= 0 for enemy in self.enemies): self.exit.color=NEON_YELLOW
     def input(self,key):
         if self.state == "INTRO" and key not in ("mouse left",): self.show_menu(); return
-        if self.state == "MENU" and key == "enter": self.hide_menu(); self.state="PLAY"; self.show_hud(); return
+        if self.state == "MENU" and key in ("enter", "left mouse down"): self.hide_menu(); self.state="PLAY"; self.show_hud(); return
         if self.state == "MENU" and key == "c": self.message.text="WASD move | LMB shoot | E shop | clear street and reach NEXT"; invoke(setattr,self.message,"text", "", delay=3); return
         if self.state == "PLAY":
             if key == "left mouse down": self.shoot()
