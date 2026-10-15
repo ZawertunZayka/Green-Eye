@@ -2,6 +2,8 @@
 
 A 3D cartoon cleanup game using Ursina, with three stages and a fictional final boss at ZSTI. Asset credits are in CREDITS.md.
 
+At launch, a short skippable 3D cinematic shows zombies and skeletons taking over the streets of Gliwice before the main menu appears.
+
 ## Run
 
     python3 -m venv .venv
