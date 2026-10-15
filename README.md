@@ -19,6 +19,6 @@ The current entry point is main.py → game3d.py. Other Python modules are retai
 - Clear the stage, drive east past x=20 and press E to continue.
 - Shop: P buys a damage upgrade for 30 coins (maximum three upgrades).
 
-The gameplay view has only a contextual interaction prompt and a small target marker. Statistics and controls are in the pause menu. There are no permanent city/street labels or shot notifications.
+The gameplay view has only a contextual interaction prompt and a small target marker. Brief story cards introduce each stage and disappear automatically. The final ZSTI arena shows the boss name and health bar. Statistics and controls are in the pause menu; there are no permanent city/street labels or shot notifications.
 
 Coins, XP and upgrades are saved to save.json. Replaying retains these rewards. Existing unrelated save fields are preserved. The job board reports remaining enemies and the per-target reward.

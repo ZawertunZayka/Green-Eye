@@ -52,6 +52,11 @@ def skeleton(name):
 class HybridGame:
     """3D street layer with the project's 2D-style HUD and quest prompts."""
     LEVEL_NAMES = ("ZWYCIESTWA", "DWORCOWA", "ZSTI SCHOOL")
+    STORY = (
+        "A cleanup call arrives. Clear the street and follow the road east.",
+        "A dropped note points farther east: ZSTI. Someone is waiting there.",
+        "ZSTI courtyard. The Principal of Disorder challenges the city's cleaner!",
+    )
     LEVELS = (
         (("bruiser", (11, 0, -5), PINK, "Warrior", 2), ("punk", (14, 0, 6), CYAN, "Rogue", 2)),
         (("punk", (11, 0, -5), CYAN, "Rogue", 2), ("businessman", (-12, 0, -5), color.orange, "Mage", 2), ("bruiser", (14, 0, 6), PINK, "Warrior", 3)),
@@ -76,6 +81,8 @@ class HybridGame:
         self.in_car = True
         self.attack_cooldown = 0.0
         self.fight_banner_time = 0.0
+        self.story_queue: list[str] = []
+        self.story_time = 0.0
         self.create_ui()
         self.build_street()
 
@@ -115,6 +122,11 @@ class HybridGame:
         self.help = Text("W/S  DRIVE   A/D  STEER   TAB  LOCK TARGET   J  CLEANUP   E  EXIT   ESC  MENU", parent=camera.ui, position=(-.51, -.467), scale=.61, color=color.white, enabled=False)
         self.notice_bg = Entity(parent=camera.ui, model="quad", position=(0, -.43), scale=(.68, .055), color=color.rgba32(8, 12, 24, 220), enabled=False)
         self.notice = Text("", parent=camera.ui, origin=(0, 0), y=-.43, z=-.1, scale=.9, color=color.white, enabled=False)
+        self.story_bg = Entity(parent=camera.ui, model="quad", position=(0, -.31), scale=(.82, .105), color=color.rgba32(8, 12, 24, 235), enabled=False)
+        self.story_text = Text("", parent=camera.ui, origin=(0, 0), y=-.31, z=-.1, scale=.82, color=YELLOW, enabled=False)
+        self.boss_bar_bg = Entity(parent=camera.ui, model="quad", position=(0, .435), scale=(.58, .035), color=color.rgba32(20, 12, 24, 245), enabled=False)
+        self.boss_bar_fill = Entity(parent=camera.ui, model="quad", origin=(-.5, 0), position=(-.29, .435), scale=(.58, .022), color=PINK, enabled=False)
+        self.boss_name = Text("PRINCIPAL OF DISORDER", parent=camera.ui, origin=(0, 0), y=.465, z=-.1, scale=.72, color=YELLOW, enabled=False)
         self.fight_banner = Text("", parent=camera.ui, origin=(0, 0), y=.22, scale=.085, color=PINK, enabled=False)
         self.quest_panel = Entity(parent=camera.ui, model="quad", color=color.rgb32(18, 14, 32), scale=(.78, .58), enabled=False)
         self.quest_text = Text("", parent=camera.ui, origin=(0, 0), y=.03, z=-.1, scale=1, color=YELLOW, enabled=False)
@@ -171,6 +183,25 @@ class HybridGame:
             scale = 1.05 if kind == "zsti_boss" else .65
             enemy = Entity(model=skeleton(model_name), position=pos, rotation_x=0, scale=scale, color=tint)
             self.enemies.append({"entity": enemy, "kind": kind, "hp": hp, "max_hp": hp, "dead": False, "tint": tint})
+
+    def boss(self):
+        return next((enemy for enemy in self.enemies if enemy["kind"] == "zsti_boss" and not enemy["dead"]), None)
+
+    def refresh_boss_bar(self):
+        boss = self.boss() if self.street == 2 else None
+        visible = self.state == "PLAY" and boss is not None
+        self.boss_bar_bg.enabled = visible
+        self.boss_bar_fill.enabled = visible
+        self.boss_name.enabled = visible
+        if boss:
+            self.boss_bar_fill.scale_x = .58 * max(0, boss["hp"]) / boss["max_hp"]
+
+    def show_story(self):
+        if not self.story_queue:
+            return
+        self.story_text.text = self.story_queue.pop(0)
+        self.story_bg.enabled = self.story_text.enabled = True
+        self.story_time = 4.5
 
     def build_boss_arena(self):
         """Final ZSTI courtyard reached from the east road."""
@@ -331,6 +362,8 @@ class HybridGame:
         self.east_exit_markers.clear()
         self.building_bounds.clear()
         self.enemies.clear()
+        self.story_queue = [self.STORY[self.street]]
+        self.story_time = 0
         # Continuous grass base and asphalt underlays keep the city readable even
         # where individual road-kit meshes have small tile gaps.
         # Thin horizontal cubes are used instead of planes: in Ursina this makes
@@ -396,12 +429,16 @@ class HybridGame:
         self.state = "PLAY"
         for item in (self.intro, self.map_panel, self.menu_card, self.menu, self.quest_panel, self.quest_text, self.shop_panel, self.shop_text, self.win_panel, self.win_text): item.enabled = False
         self.fight_banner.enabled = False
+        self.refresh_boss_bar()
+        if self.story_queue:
+            self.show_story()
         self.refresh_prompt()
 
     def hide_ui(self):
         for item in (self.intro, self.map_panel, self.menu_card, self.menu,
                      self.hud_bg, self.hud, self.help_bg, self.help,
                      self.objective_bg, self.objective, self.notice_bg, self.notice,
+                     self.story_bg, self.story_text, self.boss_bar_bg, self.boss_bar_fill, self.boss_name,
                      self.fight_banner, self.quest_panel, self.quest_text,
                      self.shop_panel, self.shop_text, self.win_panel, self.win_text):
             item.enabled = False
@@ -449,7 +486,7 @@ class HybridGame:
         self.hud.enabled = False; self.help.enabled = False; self.notice.enabled = False; self.objective_bg.enabled = False; self.objective.enabled = False
         self.fight_banner.enabled = False
         self.win_panel.enabled = True; self.win_text.enabled = True
-        self.win_text.text = "ZSTI CLEANUP COMPLETE!\n\nTHE CITY IS TIDY\n\nCOINS %d   XP %d\n\nENTER  PLAY AGAIN" % (self.coins, self.xp)
+        self.win_text.text = "THE PRINCIPAL IS DEFEATED!\n\nGliwice can breathe again.\nEverything is tidy.\n\nCOINS %d   XP %d\n\nENTER  PLAY AGAIN" % (self.coins, self.xp)
 
     def open_quest(self):
         self.hide_ui()
@@ -483,6 +520,11 @@ class HybridGame:
         if self.state != "PLAY":
             return
         self.update_target_lock()
+        self.refresh_boss_bar()
+        if self.story_time > 0:
+            self.story_time -= dt
+            if self.story_time <= 0:
+                self.story_bg.enabled = self.story_text.enabled = False
         if self.in_car:
             forward = held_keys["s"] - held_keys["w"]
             steer = held_keys["d"] - held_keys["a"]
