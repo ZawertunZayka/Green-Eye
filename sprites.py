@@ -3,7 +3,8 @@ from settings import COLORS
 from assets import load_image
 
 def draw_person(surface: pygame.Surface, x: int, y: int, facing: int = 1,
-                kind: str = "girl", scale: int = 1, flash: bool = False) -> None:
+                kind: str = "girl", scale: int = 1, flash: bool = False,
+                top_down: bool = False) -> None:
     c = COLORS
     ink = c["white"] if flash else c["ink"]
     # Use the supplied walk-pack when available; the procedural drawing below
@@ -16,7 +17,8 @@ def draw_person(surface: pygame.Surface, x: int, y: int, facing: int = 1,
             if flash:
                 image = image.copy()
                 image.fill((255, 255, 255, 190), special_flags=pygame.BLEND_RGBA_ADD)
-            surface.blit(image, (x - 16 * scale, y - 31 * scale))
+            anchor_y = 16 if top_down else 31
+            surface.blit(image, (x - 16 * scale, y - anchor_y * scale))
             return
     if kind == "girl":
         skin, hair, outfit = (255, 190, 145), c["brown"], c["pink"]
