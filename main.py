@@ -64,16 +64,24 @@ class MenuState:
         else: surface.fill(COLORS["night"])
         overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA); overlay.fill((5, 4, 18, 118)); surface.blit(overlay, (0, 0))
         pygame.draw.rect(surface, (10, 8, 23), (8, 8, 304, 164), 2); pygame.draw.rect(surface, (255, 37, 116), (8, 8, 304, 164), 1)
-        self.game.text(surface, "GREEN-EYE", (18, 14), 15, (255, 236, 105)); self.game.text(surface, "GLIWICE // CITY PROGRESS", (20, 31), 6, (0, 222, 218))
+        pygame.draw.rect(surface, (5, 4, 18), (14, 11, 150, 29)); pygame.draw.rect(surface, (255, 37, 116), (14, 11, 150, 29), 1)
+        self.game.text(surface, "GREEN-EYE", (20, 14), 15, (255, 236, 105)); self.game.text(surface, "GLIWICE // CITY PROGRESS", (21, 31), 6, (0, 222, 218))
         # Route markers: completed streets glow cyan, current is yellow, locked is pink.
         route = ((154, 94), (190, 82), (225, 92), (126, 122), (92, 143)); current = self.game.overworld.location_index
+        readable_names = ("RYNEK", "ZWYCIESTWA", "DWORCOWA", "DOLNE WALY", "CHORZOWSKA")
         for index, point in enumerate(route):
             color = (0, 255, 210) if index < current else (255, 236, 105) if index == current else (255, 37, 116)
             pygame.draw.circle(surface, color, point, 5 if index == current else 3); pygame.draw.circle(surface, (10, 8, 23), point, 2)
-            if index < len(self.game.overworld.location_names): self.game.text(surface, self.game.overworld.location_names[index], (point[0] + 6, point[1] - 3), 5, color)
+            label = readable_names[index]
+            label_x, label_y = point[0] + 7, point[1] - 5
+            label_width = max(36, len(label) * 5 + 6)
+            if label_x + label_width > WIDTH - 6: label_x = point[0] - label_width - 7
+            pygame.draw.rect(surface, (5, 4, 18), (label_x - 2, label_y - 2, label_width, 11))
+            pygame.draw.rect(surface, color, (label_x - 2, label_y - 2, label_width, 11), 1)
+            self.game.text(surface, label, (label_x + 2, label_y), 6, color)
         progress = min(100, int(current / max(1, len(route) - 1) * 100))
-        pygame.draw.rect(surface, (10, 8, 23), (18, 143, 122, 19)); pygame.draw.rect(surface, (0, 222, 218), (22, 156, int(114 * progress / 100), 3)); self.game.text(surface, f"DISTRICTS {current}/{len(route)-1}", (22, 146), 6, COLORS["paper"])
-        self.game.text(surface, f"COINS {self.game.player.coins}   XP {self.game.player.xp}", (185, 146), 6, COLORS["paper"])
+        pygame.draw.rect(surface, (5, 4, 18), (16, 141, 142, 22)); pygame.draw.rect(surface, (0, 222, 218), (20, 157, int(134 * progress / 100), 3)); pygame.draw.rect(surface, (0, 222, 218), (16, 141, 142, 22), 1); self.game.text(surface, f"DISTRICTS {current}/{len(route)-1}", (22, 145), 6, COLORS["paper"])
+        pygame.draw.rect(surface, (5, 4, 18), (174, 141, 130, 22)); pygame.draw.rect(surface, (255, 178, 71), (174, 141, 130, 22), 1); self.game.text(surface, f"COINS {self.game.player.coins}  XP {self.game.player.xp}", (181, 148), 6, COLORS["paper"])
         if self.controls:
             pygame.draw.rect(surface, (11, 8, 23), (37, 93, 165, 52)); pygame.draw.rect(surface, (0, 222, 218), (37, 93, 165, 52), 1)
             self.game.text(surface, "CONTROLS", (83, 99), 9, (255, 236, 105)); self.game.text(surface, "WASD  MOVE", (52, 115), 7, COLORS["paper"]); self.game.text(surface, "J/K  HIT   L  SPECIAL", (52, 127), 7, COLORS["paper"]); self.game.text(surface, "ENTER / ESC  BACK", (52, 139), 7, COLORS["paper"])
