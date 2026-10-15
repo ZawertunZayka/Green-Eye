@@ -23,7 +23,7 @@ The current entry point is main.py → game3d.py. Other Python modules are retai
 - Esc: pause/menu with controls and progress; Enter: continue.
 - WASD: walk; hold Shift to run. S/W: drive forward/reverse; A/D: steer.
 - Mouse: aim; J or left click: shoot; Tab: toggle nearest-enemy lock.
-- After defeating an enemy, choose one of three upgrade cards with 1–3 or the mouse.
+- After clearing a city level, choose one of three upgrade cards with 1–3 or the mouse.
 - E: nearby shop/board, enter or leave the car.
 - Clear the stage, drive east past x=20 and press E to continue.
 - Shop: P buys a damage upgrade for 30 coins (maximum three upgrades).

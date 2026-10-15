@@ -155,9 +155,9 @@ class HybridGame:
         self.notice = Text("", parent=camera.ui, origin=(0, 0), y=-.43, z=-.1, scale=.9, color=color.white, enabled=False)
         self.story_bg = Entity(parent=camera.ui, model="quad", position=(0, -.31), scale=(.82, .105), color=color.rgba32(8, 12, 24, 235), enabled=False)
         self.story_text = Text("", parent=camera.ui, origin=(0, 0), y=-.31, z=-.1, scale=.82, color=YELLOW, enabled=False)
-        self.boss_bar_bg = Entity(parent=camera.ui, model="quad", position=(0, .435), scale=(.58, .035), color=color.rgba32(20, 12, 24, 245), enabled=False)
-        self.boss_bar_fill = Entity(parent=camera.ui, model="quad", origin=(-.5, 0), position=(-.29, .435), scale=(.58, .022), color=PINK, enabled=False)
-        self.boss_name = Text("PRINCIPAL OF DISORDER", parent=camera.ui, origin=(0, 0), y=.465, z=-.1, scale=.72, color=YELLOW, enabled=False)
+        self.boss_bar_bg = Entity(parent=camera.ui, model="quad", position=(0, .405), scale=(.54, .038), color=color.rgba32(20, 12, 24, 245), enabled=False)
+        self.boss_bar_fill = Entity(parent=camera.ui, model="quad", origin=(-.5, 0), position=(-.26, .405), scale=(.52, .024), color=PINK, enabled=False)
+        self.boss_name = Text("PRINCIPAL OF DISORDER", parent=camera.ui, origin=(0, 0), y=.437, z=-.1, scale=.72, color=YELLOW, enabled=False)
         self.fight_banner = Text("", parent=camera.ui, origin=(0, 0), y=.22, scale=.085, color=PINK, enabled=False)
         self.quest_panel = Entity(parent=camera.ui, model="quad", color=color.rgb32(18, 14, 32), scale=(.78, .58), enabled=False)
         self.quest_text = Text("", parent=camera.ui, origin=(0, 0), y=.03, z=-.1, scale=1, color=YELLOW, enabled=False)
@@ -311,7 +311,7 @@ class HybridGame:
         self.boss_bar_fill.enabled = visible
         self.boss_name.enabled = visible
         if boss:
-            self.boss_bar_fill.scale_x = .58 * max(0, boss["hp"]) / boss["max_hp"]
+            self.boss_bar_fill.scale_x = .52 * max(0, boss["hp"]) / boss["max_hp"]
 
     def refresh_player_hud(self):
         ratio = max(0, self.player_hp) / self.max_hp
@@ -458,10 +458,12 @@ class HybridGame:
             entity.animate_rotation_z(180, duration=.18)
             entity.animate_scale(0, duration=.2)
             self.coins += 5; self.xp += 10; self.save()
-            if self.street == 2 and all(enemy["dead"] for enemy in self.enemies):
-                self.win_game()
-            else:
-                self.offer_upgrades()
+            level_cleared = all(enemy["dead"] for enemy in self.enemies)
+            if level_cleared:
+                if self.street == 2:
+                    self.win_game()
+                else:
+                    self.offer_upgrades()
 
     def offer_upgrades(self):
         self.state = "UPGRADE"
