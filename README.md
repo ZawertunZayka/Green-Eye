@@ -4,6 +4,8 @@ A 3D cartoon cleanup game using Ursina, with three stages and a fictional final 
 
 The city stages contain dense residential blocks, greenery, street furniture, parked traffic and larger enemy groups. The final boss is protected by four guards.
 
+Each stage has its own identity: Zwyciestwa is a green residential district, Dworcowa is a darker station district with a forecourt and roadworks, and ZSTI is a fenced school battle arena.
+
 At launch, a short skippable 3D cinematic shows zombies and skeletons taking over the streets of Gliwice before the main menu appears.
 
 ## Run

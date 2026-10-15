@@ -500,13 +500,20 @@ class HybridGame:
         # where individual road-kit meshes have small tile gaps.
         # Thin horizontal cubes are used instead of planes: in Ursina this makes
         # the XZ orientation explicit, so the green field always fills the map.
-        self.add(Entity(model="cube", position=(0, -.30, 0), scale=(120, .6, 120), texture="white_cube", shader=unlit_shader, color=color.rgb32(42, 112, 58)))
+        ground_color = color.rgb32(42, 112, 58) if self.street != 1 else color.rgb32(58, 94, 58)
+        self.add(Entity(model="cube", position=(0, -.30, 0), scale=(120, .6, 120), texture="white_cube", shader=unlit_shader, color=ground_color))
         self.add(Entity(model="cube", position=(0, -.08, 0), scale=(120, .04, 120), collider="box", visible=False))
         if self.street == 2:
             self.build_boss_arena()
             return
-        self.add(Entity(model="cube", position=(0, -.005, 0), scale=(66, .08, 8.2), texture="white_cube", shader=unlit_shader, color=color.rgb32(48, 51, 61)))
-        self.add(Entity(model="cube", position=(0, 0, 0), scale=(8.2, .08, 52), texture="white_cube", shader=unlit_shader, color=color.rgb32(48, 51, 61)))
+        residential = self.street == 0
+        road_width = 8.2 if residential else 10.5
+        asphalt = color.rgb32(48, 51, 61) if residential else color.rgb32(38, 42, 50)
+        self.add(Entity(model="cube", position=(0, -.005, 0), scale=(66, .08, road_width), texture="white_cube", shader=unlit_shader, color=asphalt))
+        self.add(Entity(model="cube", position=(0, 0, 0), scale=(road_width, .08, 52), texture="white_cube", shader=unlit_shader, color=asphalt))
+        if not residential:
+            # Dworcowa has a broad station forecourt and a small construction site.
+            self.add(Entity(model="cube", position=(17, .01, -14), scale=(20, .08, 10), color=asphalt, shader=unlit_shader))
         # Continuous asphalt, with lane markings stopping before the junction.
         line = color.rgb32(225, 221, 200)
         for x in range(-30, 31, 4):
@@ -515,45 +522,57 @@ class HybridGame:
         for z in range(-22, 23, 4):
             if abs(z) > 6:
                 self.add(Entity(model="cube", position=(0, .07, z), scale=(.10, .02, 1.8), color=line, shader=unlit_shader))
-        sidewalk = color.rgb32(145, 150, 162)
+        sidewalk = color.rgb32(145, 150, 162) if residential else color.rgb32(178, 174, 166)
         for side in (-1, 1):
             for bank in (-1, 1):
                 self.add(Entity(model="cube", position=(side * 18.55, .10, bank * 4.85), scale=(28.9, .12, 1.5), color=sidewalk, shader=unlit_shader))
                 self.add(Entity(model="cube", position=(bank * 4.85, .10, side * 16), scale=(1.5, .12, 20.8), color=sidewalk, shader=unlit_shader))
-        # Dense but readable residential blocks around the playable roads.
-        houses = [
-            ("building-type-a", (-25, 9), 2.5), ("building-type-c", (-18, 9), 2.2), ("building-type-e", (-10, 9), 2.4),
-            ("building-type-f", (10, 9), 2.4), ("building-type-h", (18, 9), 2.2), ("building-type-j", (25, 9), 2.5),
-            ("building-type-k", (-25, -9), 2.4), ("building-type-m", (-17, -9), 2.3), ("building-type-o", (-9, -9), 2.5),
-            ("building-type-p", (10, -9), 2.3), ("building-type-r", (18, -9), 2.4), ("building-type-t", (25, -9), 2.2),
-            ("building-type-g", (-24, 18), 1.8), ("building-type-i", (-15, 18), 1.7),
-            ("building-type-l", (15, 18), 1.8), ("building-type-n", (24, 18), 1.7),
-            ("building-type-q", (-24, -18), 1.8), ("building-type-s", (-15, -18), 1.7),
-            ("building-type-u", (15, -18), 1.8), ("building-type-c", (24, -18), 1.7),
-        ]
+        if residential:
+            houses = [
+                ("building-type-a", (-25, 9), 2.5), ("building-type-c", (-18, 9), 2.2), ("building-type-e", (-10, 9), 2.4),
+                ("building-type-f", (10, 9), 2.4), ("building-type-h", (18, 9), 2.2), ("building-type-j", (25, 9), 2.5),
+                ("building-type-k", (-25, -9), 2.4), ("building-type-m", (-17, -9), 2.3), ("building-type-o", (-9, -9), 2.5),
+                ("building-type-p", (10, -9), 2.3), ("building-type-r", (18, -9), 2.4), ("building-type-t", (25, -9), 2.2),
+                ("building-type-g", (-24, 18), 1.8), ("building-type-i", (-15, 18), 1.7),
+                ("building-type-l", (15, 18), 1.8), ("building-type-n", (24, 18), 1.7),
+                ("building-type-q", (-24, -18), 1.8), ("building-type-s", (-15, -18), 1.7),
+                ("building-type-u", (15, -18), 1.8), ("building-type-c", (24, -18), 1.7),
+            ]
+        else:
+            houses = [
+                ("building-type-u", (-24, 10), 2.8), ("building-type-t", (-15, 11), 2.5),
+                ("building-type-p", (19, 13), 3.0), ("building-type-o", (26, 10), 2.4),
+                ("building-type-n", (-25, -11), 2.7), ("building-type-l", (-16, -13), 2.5),
+                ("building-type-j", (-9, -18), 1.9), ("building-type-i", (9, -10), 2.3),
+                ("building-type-g", (25, -10), 2.6), ("building-type-f", (-24, 19), 1.8),
+                ("building-type-d", (25, 19), 1.8), ("building-type-b", (-24, -19), 1.8),
+            ]
         for name, pos, size in houses:
             if self.street == 2 and pos == (18, 9):
                 continue
             self.add_building(name, (pos[0], 0, pos[1]), size)
-        # Public-space details: planters, trees, flower beds, bins and lamps.
-        for name, pos, size in (("tree-large", (-6, 0, 7), 1.5), ("tree-small", (7, 0, 7), 1.4), ("tree-large", (-7, 0, -7), 1.4), ("tree-small", (7, 0, -7), 1.4), ("planter", (5, 0, 7), 1.5), ("planter", (-5, 0, -7), 1.3)):
+        city_details = (("tree-large", (-6, 0, 7), 1.5), ("tree-small", (7, 0, 7), 1.4),
+                        ("tree-large", (-7, 0, -7), 1.4), ("tree-small", (7, 0, -7), 1.4),
+                        ("tree-small", (-21, 0, 14), 1.2), ("tree-large", (-11, 0, 14), 1.3),
+                        ("tree-large", (11, 0, -14), 1.3), ("tree-small", (21, 0, -14), 1.2),
+                        ("planter", (-13, 0, 6.8), 1.2), ("planter", (13, 0, -6.8), 1.2)) if residential else (
+                        ("planter", (-7, 0, 7), 1.3), ("planter", (7, 0, 7), 1.3),
+                        ("tree-small", (-20, 0, 16), 1.1), ("tree-small", (22, 0, 16), 1.1),
+                        ("planter", (-18, 0, -7), 1.2), ("planter", (18, 0, 7), 1.2))
+        for name, pos, size in city_details:
             self.add(Entity(model=city(name), position=pos, scale=size))
-        for name, pos, size in (
-            ("tree-small", (-21, 0, 14), 1.2), ("tree-large", (-11, 0, 14), 1.3),
-            ("tree-small", (11, 0, 14), 1.2), ("tree-large", (21, 0, 14), 1.3),
-            ("tree-large", (-21, 0, -14), 1.3), ("tree-small", (-11, 0, -14), 1.2),
-            ("tree-large", (11, 0, -14), 1.3), ("tree-small", (21, 0, -14), 1.2),
-            ("planter", (-13, 0, 6.8), 1.2), ("planter", (13, 0, -6.8), 1.2),
-        ):
-            self.add(Entity(model=city(name), position=pos, scale=size))
-        for name, pos, size in (("grass_1", (-8, 0, 8), 2.8), ("grass_2", (-3, 0, 8), 2.8), ("bush_1", (8, 0, 8), 2.4), ("flowers_1", (12, 0, 8), 2.2), ("fern", (-12, 0, 8), 2.0), ("grass_1", (18, 0, 7), 2.6), ("flowers_2", (-18, 0, -7), 2.0), ("bush_2", (14, 0, -7), 2.3)):
-            self.add(Entity(model=nature(name), position=pos, scale=size))
-        for name, pos, size in (
+        nature_details = (
+            ("grass_1", (-8, 0, 8), 2.8), ("grass_2", (-3, 0, 8), 2.8), ("bush_1", (8, 0, 8), 2.4),
+            ("flowers_1", (12, 0, 8), 2.2), ("fern", (-12, 0, 8), 2.0), ("grass_1", (18, 0, 7), 2.6),
             ("oak_1", (-27, 0, 14), 1.5), ("birch_2", (27, 0, 14), 1.5),
             ("oak_2", (-27, 0, -14), 1.5), ("birch_1", (27, 0, -14), 1.5),
             ("bush_3", (-18, 0, 14), 1.8), ("flowers_1", (18, 0, 14), 1.8),
-            ("flowers_2", (-18, 0, -14), 1.8), ("bush_1", (18, 0, -14), 1.8),
-        ):
+        ) if residential else (
+            ("grass_1", (-7, 0, 8), 2.0), ("bush_2", (7, 0, 8), 1.8),
+            ("birch_3", (-27, 0, 16), 1.3), ("cypress_1", (27, 0, 16), 1.3),
+            ("bush_1", (-20, 0, -16), 1.5), ("grass_2", (22, 0, -17), 1.8),
+        )
+        for name, pos, size in nature_details:
             self.add(Entity(model=nature(name), position=pos, scale=size))
         for pos, rotation in (((-13, .1, 5.2), 0), ((13, .1, 5.2), 0), ((-13, .1, -5.2), 180), ((13, .1, -5.2), 180)):
             self.add(Entity(model=road("light-square"), position=pos, rotation_y=rotation, scale=1.15))
@@ -563,16 +582,27 @@ class HybridGame:
             self.add(Entity(model=road("road-sign-street"), position=pos, scale=1.2))
         for pos in ((-20, .1, 7), (20, .1, -7)):
             self.add(Entity(model=road("dumpster"), position=pos, scale=1.1))
-        self.shop = self.add_building("building-type-b", (8, 0, 17), 2.1)
-        self.board = self.add_building("building-type-d", (-8, 0, 17), 1.9)
+        if not residential:
+            for name, pos, rotation in (("construction-barrier", (12, .1, -9), 0),
+                                        ("construction-barrier", (17, .1, -9), 0),
+                                        ("construction-cone", (10, .1, -7), 0),
+                                        ("construction-cone", (20, .1, -7), 0),
+                                        ("electricity-pole", (-21, .1, 6), 0)):
+                self.add(Entity(model=road(name), position=pos, rotation_y=rotation, scale=1.15))
+        shop_pos, board_pos = ((8, 0, 17), (-8, 0, 17)) if residential else ((-8, 0, 16), (8, 0, 16))
+        self.shop = self.add_building("building-type-b", shop_pos, 2.1)
+        self.board = self.add_building("building-type-d", board_pos, 1.9)
         for z in (-2.2, 0, 2.2):
             marker = self.add(Entity(model="cube", position=(25, .22, z), scale=(2.4, .08, .16),
                                      rotation_y=-25, color=CYAN, shader=unlit_shader, enabled=False))
             self.east_exit_markers.append(marker)
         self.spawn_player()
-        for name, pos, rotation in (("taxi", (-15, .45, 0), 0), ("police", (11, .45, 0), 0),
-                                    ("van", (0, .45, 12), 90), ("delivery", (0, .45, -12), 90),
-                                    ("hatchback-sports", (-23, .45, 3), 0), ("suv", (22, .45, -3), 180)):
+        traffic = (("taxi", (-15, .45, 0), 0), ("police", (11, .45, 0), 0),
+                   ("van", (0, .45, 12), 90), ("hatchback-sports", (-23, .45, 3), 0)) if residential else (
+                   ("ambulance", (-17, .45, 0), 0), ("garbage-truck", (13, .45, 0), 180),
+                   ("delivery", (0, .45, 13), 90), ("police", (0, .45, -15), 90),
+                   ("taxi", (18, .45, -14), 0))
+        for name, pos, rotation in traffic:
             self.traffic.append(Entity(model=car(name), position=pos, rotation_y=rotation, scale=1.2))
         self.spawn_enemies()
         camera.position = (-7, 19, -18); camera.look_at(self.car_entity.position)
