@@ -8,5 +8,5 @@ assets/user/city/gliwice_map.png is the user-supplied 1674x940 map image. It is 
 
 assets/user/3d_city/ contains the newly supplied 3D city set: GLB buildings,
 roads, fences, planters and trees, plus the matching colormap and preview PNGs.
-The files are preserved for the 3D scene integration and are not used by the
-stable 2D launcher yet.
+The 2D overworld uses the supplied preview PNGs as pixel-art landmark sprites;
+the original GLB files are preserved for a future true-3D renderer.

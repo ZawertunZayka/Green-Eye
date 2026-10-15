@@ -10,7 +10,8 @@ The Gliwice map image in assets/user/city/gliwice_map.png was supplied by the us
 
 The 3D city set in assets/user/3d_city/ was supplied by the user from
 `/home/zawe/Загрузки/Downloads`. Its included License.txt is preserved beside
-the copied GLB models. The current stable 2D launcher does not load these
-models yet.
+the copied GLB models. The 2D overworld uses the pack's supplied 64x64 preview
+PNG renders as building sprites; GLB files remain available for a future true-
+3D renderer.
 
 If external assets are added later, record their name, author, source URL, and license here. Only CC0 or CC-BY assets are acceptable.

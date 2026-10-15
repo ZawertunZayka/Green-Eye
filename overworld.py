@@ -76,10 +76,13 @@ class OverworldState:
         self.label(surface, "PARK CHOPINA", (185, 69), (0, 222, 218))
         pygame.draw.line(surface, (255, 178, 71), (282, 71), (282, 27), 2); pygame.draw.line(surface, (255, 178, 71), (270, 55), (294, 55), 1); pygame.draw.line(surface, (255, 178, 71), (276, 43), (288, 43), 1)
         self.label(surface, "RADIO TOWER", (261, 20), (255, 178, 71))
-        # Residential blocks and Kenney building sprites.
+        # Residential blocks plus 2D previews rendered from the supplied 3D city kit.
         for rect in self.buildings: self.building(surface, rect, (255, 37, 116))
         for name, pos in (("city/building-wide-a.png", (8, 48)), ("city/building-a.png", (50, 48)), ("city/building-c.png", (265, 48)), ("city/skyscraper-a.png", (274, 138))):
             prop = load_image(name, (30, 30))
+            if prop: surface.blit(prop, pos)
+        for name, pos, size in (("building-type-a", (12, 73), 30), ("building-type-f", (53, 73), 28), ("building-type-k", (183, 74), 30), ("building-type-p", (224, 74), 28), ("building-type-u", (267, 73), 34), ("building-type-d", (12, 137), 30), ("building-type-m", (258, 137), 30)):
+            prop = load_image(f"3d_city/Previews/{name}.png", (size, size))
             if prop: surface.blit(prop, pos)
         pygame.draw.rect(surface, (255, 37, 116), (44, 25, 30, 18)); pygame.draw.rect(surface, (12, 9, 24), (48, 29, 22, 10)); self.label(surface, "CLEANUP HQ", (47, 32), (255, 236, 105))
         self.game.text(surface, f"GLIWICE // {self.location_names[self.location_index]}", (8, 6), 8, (0, 222, 218))
