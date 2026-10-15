@@ -171,6 +171,14 @@ class HybridGame:
         self.map_panel = Entity(parent=camera.ui, model="quad", texture=MAP, scale=(1.72, 1), color=color.rgba32(255, 255, 255, 255), enabled=False)
         self.menu_card = Entity(parent=camera.ui, model="quad", color=color.rgba32(8, 6, 18, 248), scale=(.62, .78), enabled=False)
         self.menu = Text("", parent=camera.ui, origin=(0, 0), y=.02, z=-.1, scale=1, color=color.white, enabled=False)
+        self.menu_title = Text("GREEN-EYE", parent=camera.ui, origin=(0, 0), y=.285, z=-.12,
+                               scale=1.55, color=CYAN, enabled=False)
+        self.menu_progress = Text("", parent=camera.ui, origin=(0, 0), y=.17, z=-.12,
+                                  scale=.72, color=YELLOW, enabled=False)
+        self.menu_controls = Text("MOVE       WASD\nRUN        SHIFT\nDRIVE      S / W\nSTEER      A / D\nAIM + FIRE  MOUSE / J\nTARGET     TAB\nINTERACT   E", parent=camera.ui,
+                                 origin=(0, 0), y=-.045, z=-.12, scale=.62, color=color.white, enabled=False)
+        self.menu_hint = Text("ENTER  START CLEANUP", parent=camera.ui, origin=(0, 0), y=-.335, z=-.12,
+                              scale=.70, color=PINK, enabled=False)
         self.hud_bg = Entity(parent=camera.ui, model="quad", position=(0, .455), scale=(.98, .06), color=color.rgba32(8, 12, 24, 235), enabled=False)
         self.hud = Text("", parent=camera.ui, position=(-.46, .462), scale=.68, color=YELLOW, enabled=False)
         self.objective_bg = Entity(parent=camera.ui, model="quad", position=(-.33, .335), scale=(.48, .095), color=color.rgba32(8, 12, 24, 235), enabled=False)
@@ -911,7 +919,9 @@ class HybridGame:
     def start(self):
         self.hide_ui()
         self.state = "PLAY"
-        for item in (self.intro, self.map_panel, self.menu_card, self.menu, self.quest_panel, self.quest_text, self.shop_panel, self.shop_text, self.win_panel, self.win_text): item.enabled = False
+        for item in (self.intro, self.map_panel, self.menu_card, self.menu, self.menu_title, self.menu_progress,
+                     self.menu_controls, self.menu_hint, self.quest_panel, self.quest_text, self.shop_panel,
+                     self.shop_text, self.win_panel, self.win_text): item.enabled = False
         self.fight_banner.enabled = False
         self.hp_bg.enabled = self.hp_fill.enabled = self.hp_text.enabled = True
         self.hotbar.enabled = True
@@ -930,6 +940,7 @@ class HybridGame:
         self.ending_confetti.clear()
         for item in (self.intro_top_bar, self.intro_bottom_bar, self.intro, self.intro_skip,
                      self.map_panel, self.menu_card, self.menu,
+                     self.menu_title, self.menu_progress, self.menu_controls, self.menu_hint,
                      self.hud_bg, self.hud, self.help_bg, self.help,
                      self.objective_bg, self.objective, self.notice_bg, self.notice,
                      self.story_bg, self.story_text, self.boss_bar_bg, self.boss_bar_fill, self.boss_name,
@@ -968,11 +979,11 @@ class HybridGame:
 
     def show_menu(self):
         self.hide_ui()
-        self.menu.text = (f"GREEN-EYE\n\nStage {self.street + 1}/3   Coins {self.coins}   XP {self.xp}"
-                          "\n\nEnter  Continue\nWASD  Walk   Shift  Run\nS / W  Drive / Reverse\nA / D  Steer"
-                          "\nMouse + J / Click  Shoot\nTab  Target lock\nE  Interact")
+        self.menu_progress.text = f"STAGE {self.street + 1} / 3    COINS {self.coins}    XP {self.xp}"
         self.state = "MENU"
-        self.intro.enabled = False; self.map_panel.enabled = True; self.menu_card.enabled = True; self.menu.enabled = True
+        self.intro.enabled = False; self.map_panel.enabled = True; self.menu_card.enabled = True
+        self.menu_title.enabled = self.menu_progress.enabled = self.menu_controls.enabled = self.menu_hint.enabled = True
+        self.menu.enabled = False
         self.hud_bg.enabled = False; self.help_bg.enabled = False; self.notice_bg.enabled = False
         self.hud.enabled = False; self.help.enabled = False; self.notice.enabled = False; self.objective_bg.enabled = False; self.objective.enabled = False
 
