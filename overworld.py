@@ -58,6 +58,19 @@ class OverworldState:
             for x in range(0, WIDTH, 16):
                 tile = tiles[(index + x // 16) % len(tiles)]
                 if tile: surface.blit(tile, (x, y))
+        # Road strips use the supplied 3D-pack path renders, not Python-drawn shapes.
+        road = load_image("3d_city/Previews/path-long.png", (32, 18))
+        road_edge = load_image("3d_city/Previews/path-stones-long.png", (32, 12))
+        if road:
+            for x in range(0, WIDTH, 32):
+                surface.blit(road, (x, 86))
+            vertical = pygame.transform.rotate(road, 90)
+            for y in range(24, HEIGHT, 18):
+                surface.blit(vertical, (145, y))
+        if road_edge:
+            for x in range(0, WIDTH, 32):
+                surface.blit(road_edge, (x, 78))
+                surface.blit(road_edge, (x, 105))
         for name, pos, size in (("building-type-a", (12, 42), 42), ("building-type-f", (53, 42), 38), ("building-type-k", (180, 42), 42), ("building-type-p", (222, 42), 38), ("building-type-u", (266, 42), 46), ("building-type-d", (10, 120), 42), ("building-type-m", (254, 120), 42), ("tree-large", (232, 28), 32), ("tree-small", (198, 70), 28), ("planter", (146, 28), 24), ("fence", (150, 120), 38)):
             prop = load_image(f"3d_city/Previews/{name}.png", (size, size))
             if prop: surface.blit(prop, pos)
