@@ -39,6 +39,8 @@ class HybridGame:
         self.scene_entities: list[Entity] = []
         self.traffic: list[Entity] = []
         self.enemies: list[dict] = []
+        self.avatar: Entity | None = None
+        self.in_car = True
         self.create_ui()
         self.build_street()
 
@@ -91,11 +93,21 @@ class HybridGame:
         self.add(Text("QUEST BOARD [E]", world_position=(-5, 3.5, 10), billboard=True, scale=.9, color=YELLOW))
         self.car_entity = Entity(model=car("sedan"), position=(-7, .5, 0), scale=1.25, collider="box")
         self.add(self.car_entity)
+        # The supplied packs contain city/vehicle models, but no humanoid GLBs.
+        # Keep the character fully 3D with a small primitive body until a character
+        # pack is added; the gameplay interface does not depend on the model.
+        self.avatar = self.add(Entity(model="cube", position=(-5.5, .9, 0), scale=(.7, 1.6, .7), color=YELLOW))
+        Entity(parent=self.avatar, model="sphere", y=.95, scale=.55, color=color.rgb(255, 205, 160))
+        Entity(parent=self.avatar, model="cube", y=.48, scale=(1.05, .12, 1.05), color=CYAN)
+        self.avatar.enabled = False
+        self.in_car = True
         for name, pos, rotation in (("taxi", (-15, .45, 0), 0), ("police", (11, .45, 0), 0), ("van", (0, .45, 12), 90), ("delivery", (0, .45, -12), 90)):
             self.traffic.append(Entity(model=car(name), position=pos, rotation_y=rotation, scale=1.2))
         enemy_setup = (("bruiser", (11, 1.1, -5), PINK), ("punk", (14, 1.1, 6), CYAN), ("businessman", (-12, 1.1, -5), color.orange))
         for kind, pos, tint in enemy_setup:
-            enemy = Entity(model="quad", texture=f"{WALK}/{kind}/south/00.png", billboard=True, position=pos, scale=2.2, double_sided=True)
+            enemy = Entity(model="cube", position=pos, scale=(.8, 1.6, .8), color=tint)
+            Entity(parent=enemy, model="sphere", y=.95, scale=.55, color=color.rgb(235, 175, 140))
+            Entity(parent=enemy, model="cube", y=.48, scale=(1.05, .12, 1.05), color=color.rgb(35, 35, 48))
             self.enemies.append({"entity": enemy, "kind": kind, "hp": 2, "dead": False, "tint": tint})
         self.add(Text(f"UL. {['ZWYCIESTWA', 'DWORCOWA', 'DOLNYCH WALOW', 'CHORZOWSKA', 'RYNEK'][self.street % 5]}", world_position=(-2, 4, -1), billboard=True, scale=1.0, color=YELLOW))
         camera.position = (-7, 19, -18); camera.look_at(self.car_entity.position)
@@ -104,7 +116,7 @@ class HybridGame:
         self.state = "PLAY"
         for item in (self.intro, self.map_panel, self.menu_card, self.menu, self.quest_panel, self.quest_text, self.shop_panel, self.shop_text): item.enabled = False
         self.hud.enabled = True; self.help.enabled = True; self.notice.enabled = True
-        self.notice.text = "3D STREET READY"
+        self.notice.text = "3D STREET READY // E EXIT CAR"
 
     def show_menu(self):
         self.state = "MENU"
@@ -128,19 +140,28 @@ class HybridGame:
             if self.intro_time > 3.0: self.show_menu()
             return
         if self.state != "PLAY": return
-        forward = held_keys["w"] - held_keys["s"]
-        steer = held_keys["d"] - held_keys["a"]
-        if forward: self.car_entity.position += self.car_entity.forward * forward * 8 * dt
-        self.car_entity.rotation_y += steer * 100 * dt
-        self.car_entity.x = clamp(self.car_entity.x, -28, 28); self.car_entity.z = clamp(self.car_entity.z, -22, 22)
-        camera.position = lerp(camera.position, self.car_entity.position + Vec3(0, 19, -18), dt * 4)
-        camera.look_at(self.car_entity.position + Vec3(0, 0, 2))
+        if self.in_car:
+            forward = held_keys["w"] - held_keys["s"]
+            steer = held_keys["d"] - held_keys["a"]
+            if forward: self.car_entity.position += self.car_entity.forward * forward * 8 * dt
+            self.car_entity.rotation_y += steer * 100 * dt
+            self.car_entity.x = clamp(self.car_entity.x, -28, 28); self.car_entity.z = clamp(self.car_entity.z, -22, 22)
+            actor = self.car_entity
+        else:
+            actor = self.avatar
+            direction = Vec3(held_keys["d"] - held_keys["a"], 0, held_keys["w"] - held_keys["s"])
+            if direction.length() and actor:
+                actor.position += direction.normalized() * 4.5 * dt
+                actor.x = clamp(actor.x, -28, 28); actor.z = clamp(actor.z, -22, 22)
+        camera.position = lerp(camera.position, actor.position + Vec3(0, 15 if not self.in_car else 19, -14 if not self.in_car else -18), dt * 4)
+        camera.look_at(actor.position + Vec3(0, 0, 1))
         for enemy in self.enemies:
             if enemy["dead"]: continue
-            delta = self.car_entity.position - enemy["entity"].position
+            delta = actor.position - enemy["entity"].position
             delta.y = 0
-            if delta.length() > 3: enemy["entity"].position += delta.normalized() * 1.2 * dt
-        self.hud.text = f"GLIWICE // RYNEK     COINS {self.coins}     XP {self.xp}     SEDAN"
+            if delta.length() > 3 and delta.length() < 16: enemy["entity"].position += delta.normalized() * 1.2 * dt
+        mode = "DRIVING" if self.in_car else "ON FOOT"
+        self.hud.text = f"GLIWICE // {['ZWYCIESTWA', 'DWORCOWA', 'DOLNYCH WALOW', 'CHORZOWSKA', 'RYNEK'][self.street % 5]}   COINS {self.coins}   XP {self.xp}   {mode}"
 
     def input(self, key):
         if self.state == "INTRO": self.show_menu()
@@ -148,15 +169,27 @@ class HybridGame:
         elif self.state == "PLAY":
             if key == "escape": self.show_menu()
             elif key in ("j", "left mouse down"):
-                target = min((e for e in self.enemies if not e["dead"]), key=lambda e: distance(self.car_entity, e["entity"]), default=None)
-                if target and distance(self.car_entity, target["entity"]) < 4:
+                if self.in_car:
+                    self.notice.text = "E EXIT CAR TO START A CLEANUP FIGHT"
+                    return
+                target = min((e for e in self.enemies if not e["dead"]), key=lambda e: distance(self.avatar, e["entity"]), default=None)
+                if target and distance(self.avatar, target["entity"]) < 3.2:
                     target["hp"] -= 1; self.notice.text = "PAN BONK!"
                     if target["hp"] <= 0:
                         target["dead"] = True; target["entity"].animate_scale(0, duration=.15); self.coins += 5; self.xp += 10; self.save()
-            elif key == "e" and distance(self.car_entity, self.shop) < 4: self.open_shop()
-            elif key == "e" and distance(self.car_entity, self.board) < 4: self.open_quest()
-            elif key == "e" and self.car_entity.x > 20 and all(e["dead"] for e in self.enemies):
+            elif key == "e" and distance(self.avatar if not self.in_car else self.car_entity, self.shop) < 4: self.open_shop()
+            elif key == "e" and distance(self.avatar if not self.in_car else self.car_entity, self.board) < 4: self.open_quest()
+            elif key == "e" and self.in_car and self.car_entity.x > 20 and all(e["dead"] for e in self.enemies):
                 self.street += 1; self.build_street(); self.start()
+            elif key == "e" and self.in_car:
+                self.in_car = False
+                self.avatar.position = self.car_entity.position + Vec3(1.4, .4, 0)
+                self.avatar.enabled = True
+                self.notice.text = "ON FOOT // J CLEANUP PAN // E ENTER CAR"
+            elif key == "e" and not self.in_car and distance(self.avatar, self.car_entity) < 2.5:
+                self.in_car = True
+                self.avatar.enabled = False
+                self.notice.text = "BACK IN CAR // DRIVE TO THE NEXT STREET"
         elif self.state == "QUEST":
             if key in ("e", "escape"): self.start()
             elif key == "enter": self.quest_text.text = "QUEST ACTIVE\n\nREMOVE 3 TARGETS\n\nE CLOSE"; self.notice.text = "CLEANUP JOB ACCEPTED"

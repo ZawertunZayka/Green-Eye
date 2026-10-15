@@ -5,3 +5,4 @@ No required assets are missing for the current build. Optional future replacemen
 - girl.png, enemy_thug.png, enemy_teen.png, enemy_dealer.png: transparent PNG, 16x24 or 32x48 pixels.
 - tiles.png: transparent PNG tileset, 16x16 pixel tiles.
 - menu_music.ogg, hit.wav, confirm.wav: short CC0/CC-BY audio files.
+- optional 3D humanoid models: girl_player.glb, thug.glb, punk.glb, dealer.glb with embedded or adjacent PNG textures; the current build uses generated 3D bodies so it remains playable without these files.
