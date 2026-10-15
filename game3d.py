@@ -98,6 +98,7 @@ class HybridGame:
         self.enemies: list[dict] = []
         self.attack_effects: list[Entity] = []
         self.projectiles: list[dict] = []
+        self.enemy_projectiles: list[dict] = []
         self.locked_enemy: dict | None = None
         self.lock_marker: Entity | None = None
         self.east_exit_markers: list[Entity] = []
@@ -206,9 +207,9 @@ class HybridGame:
         labels = ("PAN", "PIN", "SOUP")
         for index, (x, weapon, label) in enumerate(zip((-.32, 0, .32), self.WEAPONS, labels)):
             frame = Entity(parent=self.hotbar, model="quad", x=x, scale=(.27, .76), color=color.rgb32(65, 70, 85))
-            face = Button(parent=frame, model="quad", scale=(.84, .84), color=color.rgb32(20, 25, 38),
-                          highlight_color=color.rgb32(35, 65, 78), pressed_color=CYAN)
-            face.on_click = Func(self.equip_weapon, index)
+            # Use passive entities instead of Buttons: Button hover-state updates
+            # made the hotbar flicker while the mouse moved over the screen.
+            face = Entity(parent=frame, model="quad", scale=(.84, .84), color=color.rgb32(20, 25, 38))
             Text(str(index + 1), parent=frame, x=-.35, y=.29, z=-.1, scale=.65, color=color.white)
             icon = Text(label, parent=frame, origin=(0, 0), y=.04, z=-.1, scale=.64, color=weapon["color"])
             state = Text("", parent=frame, origin=(0, 0), y=-.27, z=-.1, scale=.35, color=color.white)
@@ -268,7 +269,8 @@ class HybridGame:
         for kind, pos, tint, model_name, hp in self.LEVELS[self.street]:
             scale = 1.05 if kind == "zsti_boss" else .65
             enemy = Entity(model=skeleton(model_name), position=pos, rotation_x=0, scale=scale, color=tint)
-            self.enemies.append({"entity": enemy, "kind": kind, "hp": hp, "max_hp": hp, "dead": False, "tint": tint})
+            self.enemies.append({"entity": enemy, "kind": kind, "hp": hp, "max_hp": hp, "dead": False,
+                                 "tint": tint, "shot_timer": random.uniform(2.0, 4.0)})
 
     def build_intro(self):
         """Stage a short undead invasion over the already-built city."""
@@ -567,7 +569,7 @@ class HybridGame:
                       color=weapon["color"], shader=unlit_shader)
         target = self.locked_enemy if self.locked_enemy and not self.locked_enemy["dead"] else None
         self.projectiles.append({"entity": shot, "velocity": direction * weapon["speed"], "target": target,
-                                 "damage": weapon["damage"], "life": 1.0})
+                                 "damage": weapon["damage"], "speed": weapon["speed"], "life": 1.0})
 
     def update_projectiles(self, dt: float) -> None:
         for shot in self.projectiles[:]:
@@ -584,7 +586,7 @@ class HybridGame:
             if target and not target["dead"]:
                 direction = target["entity"].position + Vec3(0, 1, 0) - projectile.position
                 if direction.length():
-                    shot["velocity"] = direction.normalized() * 15
+                    shot["velocity"] = direction.normalized() * shot["speed"]
                 if direction.length() <= .75 + shot["velocity"].length() * dt:
                     self.damage_enemy(target, shot["damage"])
                     self.projectiles.remove(shot)
@@ -593,6 +595,33 @@ class HybridGame:
             projectile.position += shot["velocity"] * dt
             if shot["life"] <= 0:
                 self.projectiles.remove(shot)
+                destroy(projectile)
+
+    def fire_enemy_projectile(self, enemy: dict) -> None:
+        """Slow, non-homing enemy projectile that leaves room for dodging."""
+        start = enemy["entity"].position + Vec3(0, 1.0, 0)
+        direction = self.avatar.position + Vec3(0, .7, 0) - start
+        direction.y = 0
+        if not direction.length():
+            return
+        boss = enemy["kind"] == "zsti_boss"
+        shot = Entity(model="sphere", position=start, scale=.30 if boss else .22,
+                      color=YELLOW if boss else PINK, shader=unlit_shader)
+        self.enemy_projectiles.append({"entity": shot, "velocity": direction.normalized() * (4.2 if boss else 3.2),
+                                       "damage": 12 if boss else 8, "life": 4.0})
+
+    def update_enemy_projectiles(self, dt: float) -> None:
+        for shot in self.enemy_projectiles[:]:
+            projectile = shot["entity"]
+            shot["life"] -= dt
+            projectile.position += shot["velocity"] * dt
+            if not self.in_car and distance(projectile, self.avatar) < .7:
+                self.damage_player(shot["damage"])
+                self.enemy_projectiles.remove(shot)
+                destroy(projectile)
+                continue
+            if shot["life"] <= 0:
+                self.enemy_projectiles.remove(shot)
                 destroy(projectile)
 
     def update_target_lock(self) -> None:
@@ -610,6 +639,9 @@ class HybridGame:
         for shot in self.projectiles:
             destroy(shot["entity"])
         self.projectiles.clear()
+        for shot in self.enemy_projectiles:
+            destroy(shot["entity"])
+        self.enemy_projectiles.clear()
         self.set_target_lock(None)
         for enemy in self.enemies:
             destroy(enemy["entity"])
@@ -842,6 +874,7 @@ class HybridGame:
             self.fight_banner_time -= dt
             if self.fight_banner_time <= 0: self.fight_banner.enabled = False
         self.update_projectiles(dt)
+        self.update_enemy_projectiles(dt)
         if self.state != "PLAY":
             return
         self.update_target_lock()
@@ -884,6 +917,12 @@ class HybridGame:
                 self.damage_player(20 if enemy["kind"] == "zsti_boss" else 12)
                 if self.state != "PLAY":
                     return
+            if not self.in_car:
+                enemy["shot_timer"] -= dt
+                if 4.5 < delta.length() < 14 and enemy["shot_timer"] <= 0:
+                    self.fire_enemy_projectile(enemy)
+                    # Long cooldown keeps the street readable and projectiles avoidable.
+                    enemy["shot_timer"] = random.uniform(4.5, 6.5)
         self.refresh_minimap()
         self.refresh_prompt()
 
