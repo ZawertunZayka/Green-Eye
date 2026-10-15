@@ -86,8 +86,9 @@ class OverworldState:
         for name, pos, size in (("building-type-a", (12, 42), 42), ("building-type-f", (53, 42), 38), ("building-type-k", (180, 42), 42), ("building-type-p", (222, 42), 38), ("building-type-u", (266, 42), 46), ("building-type-d", (10, 120), 42), ("building-type-m", (254, 120), 42), ("tree-large", (232, 28), 32), ("tree-small", (198, 70), 28), ("planter", (146, 28), 24), ("fence", (150, 120), 38)):
             prop = load_image(f"3d_city/Previews/{name}.png", (size, size))
             if prop: surface.blit(prop, pos)
-        self.game.text(surface, f"GLIWICE // {self.location_names[self.location_index]}", (8, 6), 8, (0, 222, 218))
-        self.game.text(surface, self.location_notes[self.location_index], (232, 6), 6, (255, 178, 71))
+        index = self.location_index % len(self.location_names)
+        self.game.text(surface, f"GLIWICE // {self.location_names[index]}", (8, 6), 8, (0, 222, 218))
+        self.game.text(surface, self.location_notes[index], (232, 6), 6, (255, 178, 71))
         for enemy in self.enemies:
             if not enemy["done"]: draw_person(surface, int(enemy["pos"].x), int(enemy["pos"].y), kind=enemy["type"], scale=1)
         draw_person(surface, int(self.pos.x), int(self.pos.y), kind="girl", scale=1)
