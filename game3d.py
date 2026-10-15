@@ -200,19 +200,19 @@ class HybridGame:
         self.hp_text = Text("HP 100 / 100", parent=camera.ui, position=(-.465, .455), scale=.58,
                             color=color.white, enabled=False)
         # Minecraft-style quick bar: every owned weapon has a visible numbered slot.
-        self.hotbar = Entity(parent=camera.ui, model="quad", position=(0, -.365), scale=(.56, .165),
+        self.hotbar = Entity(parent=camera.ui, model="quad", position=(0, -.365, -.01), scale=(.56, .165),
                              color=color.rgba32(8, 12, 24, 235), enabled=False)
-        self.hotbar_info = Text("", parent=self.hotbar, origin=(0, 0), y=.58, z=-.1, scale=.62, color=YELLOW)
+        self.hotbar_info = Text("", parent=self.hotbar, origin=(0, 0), y=.58, z=-.06, scale=.62, color=YELLOW)
         self.hotbar_slots: list[dict] = []
         labels = ("PAN", "PIN", "SOUP")
         for index, (x, weapon, label) in enumerate(zip((-.32, 0, .32), self.WEAPONS, labels)):
-            frame = Entity(parent=self.hotbar, model="quad", x=x, scale=(.27, .76), color=color.rgb32(65, 70, 85))
-            # Use passive entities instead of Buttons: Button hover-state updates
-            # made the hotbar flicker while the mouse moved over the screen.
-            face = Entity(parent=frame, model="quad", scale=(.84, .84), color=color.rgb32(20, 25, 38))
-            Text(str(index + 1), parent=frame, x=-.35, y=.29, z=-.1, scale=.65, color=color.white)
-            icon = Text(label, parent=frame, origin=(0, 0), y=.04, z=-.1, scale=.64, color=weapon["color"])
-            state = Text("", parent=frame, origin=(0, 0), y=-.27, z=-.1, scale=.35, color=color.white)
+            # Every opaque UI layer gets a distinct depth. Without this, the
+            # GPU alternates between the frame and its face (z-fighting).
+            frame = Entity(parent=self.hotbar, model="quad", position=(x, 0, -.02), scale=(.27, .76), color=color.rgb32(65, 70, 85))
+            face = Entity(parent=frame, model="quad", z=-.02, scale=(.84, .84), color=color.rgb32(20, 25, 38))
+            Text(str(index + 1), parent=frame, x=-.35, y=.29, z=-.06, scale=.65, color=color.white)
+            icon = Text(label, parent=frame, origin=(0, 0), y=.04, z=-.06, scale=.64, color=weapon["color"])
+            state = Text("", parent=frame, origin=(0, 0), y=-.27, z=-.06, scale=.35, color=color.white)
             self.hotbar_slots.append({"frame": frame, "face": face, "icon": icon, "state": state, "weapon": weapon})
         self.minimap = Entity(parent=camera.ui, model="quad", position=(.405, .33), scale=(.19, .24),
                               color=color.rgba32(8, 12, 24, 225), enabled=False)
