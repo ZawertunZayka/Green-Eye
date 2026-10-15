@@ -51,16 +51,14 @@ class OverworldState:
                 self.game.start_fight(enemy["type"], enemy); break
     def label(self, surface, text, pos, color=(0, 222, 218)) -> None:
         self.game.text(surface, text, pos, 6, color)
-    def building(self, surface, rect, accent) -> None:
-        pygame.draw.rect(surface, (16, 12, 31), rect)
-        pygame.draw.rect(surface, accent, rect, 1)
-        for y in range(rect.y + 4, rect.bottom - 2, 6):
-            for x in range(rect.x + 4, rect.right - 2, 8): pygame.draw.rect(surface, (255, 178, 71), (x, y, 3, 2))
     def draw(self, surface: pygame.Surface) -> None:
-        # The city image and supplied 3D-kit preview renders are the scene art.
-        map_image = load_image("city/gliwice_map.png", (WIDTH, HEIGHT))
-        if map_image: surface.blit(map_image, (0, 0))
-        for name, pos, size in (("building-type-a", (12, 73), 30), ("building-type-f", (53, 73), 28), ("building-type-k", (183, 74), 30), ("building-type-p", (224, 74), 28), ("building-type-u", (267, 73), 34), ("building-type-d", (12, 137), 30), ("building-type-m", (258, 137), 30), ("tree-large", (235, 35), 22), ("planter", (202, 55), 18)):
+        # Streets use only the supplied tile textures and 3D-kit preview art.
+        tiles = [load_image(f"urban/tiles/tile_{tile:04d}.png", (16, 16)) for tile in (2, 3, 4, 10)]
+        for index, y in enumerate(range(24, HEIGHT, 16)):
+            for x in range(0, WIDTH, 16):
+                tile = tiles[(index + x // 16) % len(tiles)]
+                if tile: surface.blit(tile, (x, y))
+        for name, pos, size in (("building-type-a", (12, 42), 42), ("building-type-f", (53, 42), 38), ("building-type-k", (180, 42), 42), ("building-type-p", (222, 42), 38), ("building-type-u", (266, 42), 46), ("building-type-d", (10, 120), 42), ("building-type-m", (254, 120), 42), ("tree-large", (232, 28), 32), ("tree-small", (198, 70), 28), ("planter", (146, 28), 24), ("fence", (150, 120), 38)):
             prop = load_image(f"3d_city/Previews/{name}.png", (size, size))
             if prop: surface.blit(prop, pos)
         self.game.text(surface, f"GLIWICE // {self.location_names[self.location_index]}", (8, 6), 8, (0, 222, 218))
