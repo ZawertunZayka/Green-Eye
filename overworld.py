@@ -38,6 +38,7 @@ class OverworldState:
     def handle_event(self, event) -> None:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
             if self.pos.distance_to((58, 35)) < 30: self.game.manager.change("QUEST_BOARD")
+            elif self.pos.distance_to((104, 35)) < 20: self.game.manager.change("SHOP")
             elif self.all_clear and self.pos.x > 265 and 78 < self.pos.y < 120: self.next_location()
     @property
     def all_clear(self) -> bool:
@@ -119,6 +120,7 @@ class OverworldState:
             prop = load_image(name, (30, 30))
             if prop: surface.blit(prop, pos)
         pygame.draw.rect(surface, (255, 37, 116), (44, 25, 30, 18)); pygame.draw.rect(surface, (12, 9, 24), (48, 29, 22, 10)); self.label(surface, "CLEANUP HQ", (47, 32), (255, 236, 105))
+        pygame.draw.rect(surface, (0, 222, 218), (91, 25, 27, 18)); pygame.draw.rect(surface, (12, 9, 24), (95, 29, 19, 10)); self.label(surface, "SHOP", (98, 32), (0, 222, 218))
         name_index = self.location_index % len(self.location_names)
         self.game.text(surface, f"GLIWICE // {self.location_names[name_index]}", (8, 6), 8, (0, 222, 218))
         self.game.text(surface, self.location_notes[name_index], (232, 6), 6, (255, 178, 71))
@@ -131,4 +133,4 @@ class OverworldState:
             self.game.text(surface, "NEXT", (278, 82), 7, (255, 236, 105))
             self.game.text(surface, self.location_names[(self.location_index + 1) % len(self.location_names)], (269, 92), 5, (0, 222, 218))
             self.game.text(surface, "E", (286, 106), 8, (255, 236, 105))
-        self.game.draw_hud(surface); self.game.text(surface, self.story_lines[name_index], (104, 158), 5, (255, 178, 71)); self.game.text(surface, "WASD / ARROWS MOVE   E INTERACT", (8, 171), 7, (255, 236, 105))
+        self.game.draw_hud(surface); self.game.text(surface, self.story_lines[name_index], (104, 158), 5, (255, 178, 71)); self.game.text(surface, "E HQ / SHOP / EXIT", (8, 160), 6, (0, 222, 218)); self.game.text(surface, "WASD / ARROWS MOVE", (8, 171), 7, (255, 236, 105))

@@ -11,7 +11,7 @@ from sprites import draw_person
 @dataclass
 class PlayerData:
     hp: int = 100; max_hp: int = 100; coins: int = 0; xp: int = 0
-    upgrades: dict = field(default_factory=lambda: {"pan": 0, "health": 0})
+    upgrades: dict = field(default_factory=lambda: {"pan": 0, "health": 0, "ammo": 0})
     active_quest: Quest | None = None
 
 class StateManager:
@@ -101,6 +101,31 @@ class QuestBoardState:
     def draw(self, surface):
         surface.fill(COLORS["brown"]); pygame.draw.rect(surface, COLORS["paper"], (24, 19, 272, 135)); self.game.text(surface, "CLEANUP BOARD", (83, 30), 13, COLORS["red"]); self.game.text(surface, "JOB #001", (44, 57), 8, COLORS["ink"]); self.game.text(surface, "Clean the station corner", (44, 74), 10, COLORS["ink"]); self.game.text(surface, "One street thug is making a mess.", (44, 91), 7, COLORS["shadow"]); self.game.text(surface, "REWARD 30 COINS + 50 XP", (44, 111), 8, COLORS["green"]); self.game.text(surface, "ENTER accept   E close", (86, 137), 7, COLORS["red"])
 
+class ShopState:
+    def __init__(self, game): self.game, self.selected, self.notice = game, 0, ""
+    def handle_event(self, event):
+        if event.type != pygame.KEYDOWN: return
+        if event.key in (pygame.K_ESCAPE, pygame.K_e): self.game.manager.change("OVERWORLD")
+        elif event.key in (pygame.K_UP, pygame.K_w): self.selected = (self.selected - 1) % 3
+        elif event.key in (pygame.K_DOWN, pygame.K_s): self.selected = (self.selected + 1) % 3
+        elif event.key in (pygame.K_RETURN, pygame.K_SPACE): self.buy()
+    def buy(self):
+        items = (("pan", 30, "PAN POWER", "melee damage +6"), ("health", 25, "HEART", "max health +20"), ("ammo", 40, "AMMO", "shot damage +10"))
+        key, price, title, effect = items[self.selected]
+        if self.game.player.coins < price: self.notice = "NOT ENOUGH COINS"; return
+        self.game.player.coins -= price; self.game.player.upgrades[key] = self.game.player.upgrades.get(key, 0) + 1
+        if key == "health": self.game.player.max_hp += 20; self.game.player.hp = self.game.player.max_hp
+        self.notice = f"BOUGHT {title}!"; self.game.save()
+    def update(self, dt): pass
+    def draw(self, surface):
+        surface.fill((11, 8, 23)); pygame.draw.rect(surface, (45, 16, 67), (22, 14, 276, 150)); pygame.draw.rect(surface, (0, 222, 218), (22, 14, 276, 150), 2)
+        self.game.text(surface, "NIGHT SHOP", (105, 27), 14, (255, 236, 105)); self.game.text(surface, f"COINS {self.game.player.coins}", (130, 45), 7, COLORS["paper"])
+        items = (("PAN POWER", "melee damage +6", 30, "pan"), ("HEART", "max health +20", 25, "health"), ("AMMO", "shot damage +10", 40, "ammo"))
+        for i, (title, effect, price, key) in enumerate(items):
+            y = 63 + i * 26; active = i == self.selected; color = (255, 37, 116) if active else (72, 57, 91); pygame.draw.rect(surface, color, (42, y, 236, 20), 1); self.game.text(surface, title, (50, y + 3), 8, (255, 236, 105) if active else COLORS["paper"]); self.game.text(surface, effect, (137, y + 4), 6, COLORS["paper"]); self.game.text(surface, f"${price}", (251, y + 4), 7, (255, 178, 71)); self.game.text(surface, f"LV {self.game.player.upgrades.get(key, 0)}", (50, y + 13), 5, (0, 222, 218))
+        if self.notice: self.game.text(surface, self.notice, (101, 145), 7, (255, 37, 116))
+        self.game.text(surface, "UP/DOWN choose  ENTER buy  E close", (78, 171), 6, COLORS["cream"])
+
 class GameOverState:
     def __init__(self, game): self.game = game
     def handle_event(self, event):
@@ -110,7 +135,7 @@ class GameOverState:
 
 class Game:
     def __init__(self):
-        pygame.init(); pygame.display.set_caption(TITLE); self.window = pygame.display.set_mode((WIDTH*WINDOW_SCALE, HEIGHT*WINDOW_SCALE)); self.canvas = pygame.Surface((WIDTH, HEIGHT)); self.fonts = {}; self.player = self.load_player(); self.manager = StateManager(self); self.overworld = OverworldState(self); self.manager.add("INTRO", IntroState(self)); self.manager.add("MENU", MenuState(self)); self.manager.add("OVERWORLD", self.overworld); self.manager.add("QUEST_BOARD", QuestBoardState(self)); self.manager.add("GAME_OVER", GameOverState(self)); self.manager.change("INTRO")
+        pygame.init(); pygame.display.set_caption(TITLE); self.window = pygame.display.set_mode((WIDTH*WINDOW_SCALE, HEIGHT*WINDOW_SCALE)); self.canvas = pygame.Surface((WIDTH, HEIGHT)); self.fonts = {}; self.player = self.load_player(); self.manager = StateManager(self); self.overworld = OverworldState(self); self.manager.add("INTRO", IntroState(self)); self.manager.add("MENU", MenuState(self)); self.manager.add("OVERWORLD", self.overworld); self.manager.add("QUEST_BOARD", QuestBoardState(self)); self.manager.add("SHOP", ShopState(self)); self.manager.add("GAME_OVER", GameOverState(self)); self.manager.change("INTRO")
     def text(self, surface, value, pos, size, color):
         if size not in self.fonts: self.fonts[size] = pygame.font.Font(None, size*2)
         surface.blit(self.fonts[size].render(value, False, color), pos)

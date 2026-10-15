@@ -74,11 +74,13 @@ class FightState:
             target = self.foe if bullet["owner"] == "hero" else self.hero
             if bullet["ttl"] <= 0 or not pygame.Rect(0, 45, WIDTH, 100).collidepoint(bullet["pos"]): self.bullets.remove(bullet); continue
             if target.rect().inflate(4, 4).collidepoint(bullet["pos"]):
-                target.hp -= 35 if bullet["owner"] == "hero" else self.spec.damage; target.hit_stun = .24; self.hit_stop, self.shake = .05, 4; self.message = "CLEAN SHOT!" if bullet["owner"] == "hero" else "INCOMING!"; self.bullets.remove(bullet)
+                shot_damage = 35 + self.game.player.upgrades.get("ammo", 0) * 10 if bullet["owner"] == "hero" else self.spec.damage
+                target.hp -= shot_damage; target.hit_stun = .24; self.hit_stop, self.shake = .05, 4; self.message = "CLEAN SHOT!" if bullet["owner"] == "hero" else "INCOMING!"; self.bullets.remove(bullet)
     def try_hit(self, attacker: Fighter, defender: Fighter, attack: str) -> None:
         if not attacker.rect().inflate(27 if attack == "special" else 20, 27 if attack == "special" else 20).colliderect(defender.rect()): return
         if defender.block or (not defender.player and self.rng.random() < self.spec.block_chance): self.message = "BLOCKED!"; return
-        damage = 18 if attack == "punch" else 24 if attack == "kick" else 30 if attack == "special" else self.spec.damage; defender.hp -= damage; defender.hit_stun = .22; defender.x = max(20, min(300, defender.x + (7 if attacker.x < defender.x else -7))); self.hit_stop, self.shake = .05, 4
+        pan_bonus = self.game.player.upgrades.get("pan", 0) * 6 if attacker.player else 0
+        damage = 18 if attack == "punch" else 24 if attack == "kick" else 30 if attack == "special" else self.spec.damage; defender.hp -= damage + pan_bonus; defender.hit_stun = .22; defender.x = max(20, min(300, defender.x + (7 if attacker.x < defender.x else -7))); self.hit_stop, self.shake = .05, 4
         self.message = ("TIDY HIT!" if attack != "special" else "SOUP SPLASH!") if attacker.player else "Oof!"
     def next_round(self, won: bool) -> None:
         if max(self.rounds) >= 2: self.finish_timer = 1.25; self.banner = "FINISH HER!" if won else "OH NO!"; self.banner_time = 1.25; return
