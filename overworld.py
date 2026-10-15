@@ -7,16 +7,34 @@ class OverworldState:
     """A compact, neon top-down map of Gliwice's recognizable city zones."""
     def __init__(self, game) -> None:
         self.game, self.player = game, game.player
+        self.location_index = 0
+        self.location_names = ["RYNEK", "UL. ZWYCIESTWA", "UL. DWORCOWA", "DOLNYCH WALOW", "UL. CHORZOWSKA"]
+        self.location_notes = ["MARKET SQUARE", "CITY CENTRE", "STATION ROAD", "OLD WALLS", "EAST DISTRICT"]
         self.pos = pygame.Vector2(112, 112)
-        self.enemies = [{"type": "thug", "pos": pygame.Vector2(70, 126), "done": False},
-                        {"type": "teen", "pos": pygame.Vector2(213, 43), "done": False},
-                        {"type": "dealer", "pos": pygame.Vector2(270, 126), "done": False}]
+        self.enemies = []
+        self.spawn_location()
         self.buildings = [pygame.Rect(5, 52, 40, 20), pygame.Rect(49, 52, 34, 20), pygame.Rect(178, 50, 34, 16),
                           pygame.Rect(218, 50, 30, 16), pygame.Rect(264, 52, 50, 18), pygame.Rect(4, 144, 40, 22),
                           pygame.Rect(250, 144, 64, 22)]
+    def spawn_location(self) -> None:
+        layouts = [[("thug", (70, 126)), ("teen", (213, 43)), ("dealer", (270, 126))],
+                   [("teen", (70, 126)), ("thug", (212, 42)), ("dealer", (270, 126))],
+                   [("thug", (70, 126)), ("thug", (212, 42)), ("teen", (270, 126))],
+                   [("dealer", (70, 126)), ("teen", (212, 42)), ("thug", (270, 126))],
+                   [("dealer", (70, 126)), ("thug", (212, 42)), ("dealer", (270, 126))]]
+        self.enemies = [{"type": kind, "pos": pygame.Vector2(pos), "done": False} for kind, pos in layouts[self.location_index % len(layouts)]]
     def handle_event(self, event) -> None:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
             if self.pos.distance_to((58, 35)) < 30: self.game.manager.change("QUEST_BOARD")
+            elif self.all_clear and self.pos.x > 265 and 78 < self.pos.y < 120: self.next_location()
+    @property
+    def all_clear(self) -> bool:
+        return all(enemy["done"] for enemy in self.enemies)
+    def next_location(self) -> None:
+        if not self.all_clear: return
+        self.location_index += 1
+        self.pos = pygame.Vector2(36, 96)
+        self.spawn_location()
     def blocked(self, pos: pygame.Vector2) -> bool:
         body = pygame.Rect(int(pos.x - 6), int(pos.y - 6), 12, 12)
         return any(body.colliderect(rect) for rect in self.buildings)
@@ -64,9 +82,15 @@ class OverworldState:
             prop = load_image(name, (30, 30))
             if prop: surface.blit(prop, pos)
         pygame.draw.rect(surface, (255, 37, 116), (44, 25, 30, 18)); pygame.draw.rect(surface, (12, 9, 24), (48, 29, 22, 10)); self.label(surface, "CLEANUP HQ", (47, 32), (255, 236, 105))
-        self.game.text(surface, "GLIWICE // NIGHT SHIFT", (8, 6), 8, (0, 222, 218))
+        self.game.text(surface, f"GLIWICE // {self.location_names[self.location_index]}", (8, 6), 8, (0, 222, 218))
+        self.game.text(surface, self.location_notes[self.location_index], (232, 6), 6, (255, 178, 71))
         pygame.draw.rect(surface, (255, 37, 116), (int(self.pos.x) - 12, int(self.pos.y) + 10, 24, 2))
         for enemy in self.enemies:
             if not enemy["done"]: draw_person(surface, int(enemy["pos"].x), int(enemy["pos"].y), kind=enemy["type"], scale=1)
         draw_person(surface, int(self.pos.x), int(self.pos.y), kind="girl", scale=1)
+        if self.all_clear:
+            pygame.draw.rect(surface, (255, 37, 116), (267, 78, 45, 30), 1)
+            self.game.text(surface, "NEXT", (278, 82), 7, (255, 236, 105))
+            self.game.text(surface, self.location_names[(self.location_index + 1) % len(self.location_names)], (269, 92), 5, (0, 222, 218))
+            self.game.text(surface, "E", (286, 106), 8, (255, 236, 105))
         self.game.draw_hud(surface); self.game.text(surface, "WASD / ARROWS MOVE   E INTERACT", (8, 171), 7, (255, 236, 105))
