@@ -95,6 +95,7 @@ class HybridGame:
         self.scene_entities: list[Entity] = []
         self.building_bounds: list[tuple[float, float, float, float]] = []
         self.traffic: list[Entity] = []
+        self.traffic_velocity: dict[int, Vec3] = {}
         self.car_speed = 0.0
         self.vehicle_time = 0.0
         self.car_collision_cooldown = 0.0
@@ -670,9 +671,13 @@ class HybridGame:
             if not away.length():
                 away = Vec3(1, 0, 0)
             away = away.normalized()
-            self.car_entity.position += away * .12
-            self.car_speed *= -.25
-            vehicle.position -= away * .05
+            impact = max(3.0, abs(self.car_speed) * 1.35)
+            # Separate both bodies immediately, then give the parked car an
+            # impulse so the collision is visible instead of a static bump.
+            self.car_entity.position += away * .22
+            self.car_speed *= -.42
+            self.traffic_velocity[id(vehicle)] = self.traffic_velocity.get(id(vehicle), Vec3(0, 0, 0)) + away * impact
+            vehicle.rotation_y += random.choice((-1, 1)) * min(16.0, impact * 1.8)
         if self.car_collision_cooldown > 0:
             return
         for enemy in self.enemies:
@@ -683,6 +688,23 @@ class HybridGame:
             # A moving car is a strong but non-gory cleanup tool.
             self.damage_enemy(enemy, 2)
             break
+
+    def update_traffic_physics(self, dt: float) -> None:
+        """Integrate impact impulses on traffic cars with friction and walls."""
+        for vehicle in self.traffic:
+            velocity = self.traffic_velocity.get(id(vehicle), Vec3(0, 0, 0))
+            if velocity.length() <= .03:
+                self.traffic_velocity[id(vehicle)] = Vec3(0, 0, 0)
+                continue
+            velocity *= max(0.0, 1.0 - 3.8 * dt)
+            candidate = vehicle.position + velocity * dt
+            candidate.y = vehicle.y
+            if self.blocked(candidate, 1.5, vehicle):
+                velocity *= -.25
+            else:
+                vehicle.position = candidate
+            vehicle.rotation_y += velocity.length() * dt * 5.0
+            self.traffic_velocity[id(vehicle)] = velocity
 
     def update_visual_animations(self, dt: float, actor: Entity) -> None:
         """Small readable motion layers that work with imported static GLBs."""
@@ -709,6 +731,7 @@ class HybridGame:
     def build_street(self):
         self.car_speed = 0.0
         self.car_collision_cooldown = 0.0
+        self.traffic_velocity.clear()
         for entity in self.scene_entities + self.traffic:
             destroy(entity)
         for effect in self.attack_effects:
@@ -848,6 +871,7 @@ class HybridGame:
             vehicle = Entity(model=car(name), position=pos, rotation_y=rotation, scale=1.2, collider="box")
             vehicle.y = .45
             self.traffic.append(vehicle)
+            self.traffic_velocity[id(vehicle)] = Vec3(0, 0, 0)
         self.spawn_enemies()
         camera.position = (-7, 19, -18); camera.look_at(self.car_entity.position)
 
@@ -960,6 +984,7 @@ class HybridGame:
         self.attack_cooldown = max(0.0, self.attack_cooldown - dt)
         self.damage_cooldown = max(0.0, self.damage_cooldown - dt)
         self.car_collision_cooldown = max(0.0, self.car_collision_cooldown - dt)
+        self.update_traffic_physics(dt)
         if self.fight_banner_time > 0:
             self.fight_banner_time -= dt
             if self.fight_banner_time <= 0: self.fight_banner.enabled = False
