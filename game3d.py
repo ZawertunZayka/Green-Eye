@@ -77,6 +77,8 @@ class HybridGame:
         self.locked_enemy: dict | None = None
         self.lock_marker: Entity | None = None
         self.east_exit_markers: list[Entity] = []
+        self.intro_actors: list[dict] = []
+        self.intro_hero: Entity | None = None
         self.avatar: Entity | None = None
         self.in_car = True
         self.attack_cooldown = 0.0
@@ -85,6 +87,7 @@ class HybridGame:
         self.story_time = 0.0
         self.create_ui()
         self.build_street()
+        self.build_intro()
 
     def load_progress(self):
         try:
@@ -110,7 +113,10 @@ class HybridGame:
         temporary.replace(SAVE)
 
     def create_ui(self):
-        self.intro = Text("GREEN-EYE\n\nAll tidy now!\n\nPress any key", parent=camera.ui, origin=(0, 0), y=.06, scale=1.5, color=YELLOW)
+        self.intro_top_bar = Entity(parent=camera.ui, model="quad", position=(0, .46), scale=(2, .12), color=NIGHT)
+        self.intro_bottom_bar = Entity(parent=camera.ui, model="quad", position=(0, -.43), scale=(2, .18), color=NIGHT)
+        self.intro = Text("GLIWICE WAS QUIET...", parent=camera.ui, origin=(0, 0), y=-.39, z=-.1, scale=1.1, color=YELLOW)
+        self.intro_skip = Text("PRESS ANY KEY TO SKIP", parent=camera.ui, origin=(.5, 0), x=.47, y=.455, z=-.1, scale=.55, color=color.rgba32(220, 225, 235, 190))
         self.map_panel = Entity(parent=camera.ui, model="quad", texture=MAP, scale=(1.72, 1), color=color.rgba32(255, 255, 255, 255), enabled=False)
         self.menu_card = Entity(parent=camera.ui, model="quad", color=color.rgba32(8, 6, 18, 248), scale=(.62, .78), enabled=False)
         self.menu = Text("", parent=camera.ui, origin=(0, 0), y=.02, z=-.1, scale=1, color=color.white, enabled=False)
@@ -183,6 +189,64 @@ class HybridGame:
             scale = 1.05 if kind == "zsti_boss" else .65
             enemy = Entity(model=skeleton(model_name), position=pos, rotation_x=0, scale=scale, color=tint)
             self.enemies.append({"entity": enemy, "kind": kind, "hp": hp, "max_hp": hp, "dead": False, "tint": tint})
+
+    def build_intro(self):
+        """Stage a short undead invasion over the already-built city."""
+        self.intro_time = 0.0
+        self.intro_actors.clear()
+        routes = (
+            ("skeleton", "Warrior", (-23, 0, -2), (1, 0, .10), .68, color.rgb32(205, 215, 225)),
+            ("skeleton", "Rogue", (19, 0, 2), (-1, 0, -.08), .65, color.rgb32(190, 210, 225)),
+            ("skeleton", "Mage", (-2, 0, 19), (.08, 0, -1), .68, color.rgb32(190, 225, 215)),
+            ("skeleton", "Minion", (3, 0, -19), (-.06, 0, 1), .68, color.rgb32(215, 205, 225)),
+            ("zombie", "character-employee", (-17, 0, 2), (1, 0, -.06), 2.1, color.rgb32(92, 155, 82)),
+            ("zombie", "character-gamer", (16, 0, -2), (-1, 0, .05), 2.1, color.rgb32(78, 145, 76)),
+            ("zombie", "character-employee", (2, 0, 15), (-.04, 0, -1), 2.1, color.rgb32(105, 165, 88)),
+        )
+        for kind, model_name, position, direction, size, tint in routes:
+            if kind == "skeleton":
+                actor = Entity(model=skeleton(model_name), position=position, scale=size, color=tint)
+            else:
+                actor = Entity(model=character(model_name), texture=f"{CHARACTERS}/Textures/colormap.png",
+                               position=position, scale=size, color=tint)
+            vector = Vec3(*direction).normalized()
+            actor.rotation_y = math.degrees(math.atan2(vector.x, vector.z))
+            self.intro_actors.append({"entity": actor, "direction": vector, "phase": len(self.intro_actors) * .8})
+        self.intro_hero = Entity(model=character("character-gamer"), texture=f"{CHARACTERS}/Textures/colormap.png",
+                                 position=(-3, 0, -9), scale=2.35, color=color.white, enabled=False)
+        camera.position = (-24, 22, -25)
+        camera.look_at(Vec3(-8, 0, 0))
+
+    def finish_intro(self):
+        for actor in self.intro_actors:
+            destroy(actor["entity"])
+        self.intro_actors.clear()
+        if self.intro_hero:
+            destroy(self.intro_hero)
+            self.intro_hero = None
+        self.show_menu()
+
+    def update_intro(self, dt):
+        self.intro_time += dt
+        for actor in self.intro_actors:
+            entity = actor["entity"]
+            entity.position += actor["direction"] * dt * (1.15 if entity.scale_y < 1 else .85)
+            entity.y = abs(math.sin(self.intro_time * 5 + actor["phase"])) * .06
+        progress = min(1.0, self.intro_time / 7.5)
+        camera.position = lerp(Vec3(-24, 22, -25), Vec3(18, 17, -19), progress)
+        camera.look_at(lerp(Vec3(-8, 0, 0), Vec3(5, 0, 0), progress))
+        camera.rotation_z = 0
+        if self.intro_time < 2.3:
+            self.intro.text = "GLIWICE WAS QUIET..."
+        elif self.intro_time < 5.2:
+            self.intro.text = "THEN ZOMBIES AND SKELETONS FILLED THE STREETS"
+        else:
+            if self.intro_hero:
+                self.intro_hero.enabled = True
+                self.intro_hero.rotation_y = -25
+            self.intro.text = "GREEN-EYE  //  TIME TO CLEAN UP!"
+        if self.intro_time >= 7.5:
+            self.finish_intro()
 
     def boss(self):
         return next((enemy for enemy in self.enemies if enemy["kind"] == "zsti_boss" and not enemy["dead"]), None)
@@ -435,7 +499,8 @@ class HybridGame:
         self.refresh_prompt()
 
     def hide_ui(self):
-        for item in (self.intro, self.map_panel, self.menu_card, self.menu,
+        for item in (self.intro_top_bar, self.intro_bottom_bar, self.intro, self.intro_skip,
+                     self.map_panel, self.menu_card, self.menu,
                      self.hud_bg, self.hud, self.help_bg, self.help,
                      self.objective_bg, self.objective, self.notice_bg, self.notice,
                      self.story_bg, self.story_text, self.boss_bar_bg, self.boss_bar_fill, self.boss_name,
@@ -508,8 +573,7 @@ class HybridGame:
     def update(self, dt):
         dt = max(0.0, min(dt, .05))
         if self.state == "INTRO":
-            self.intro_time += dt
-            if self.intro_time > 3.0: self.show_menu()
+            self.update_intro(dt)
             return
         if self.state != "PLAY": return
         self.attack_cooldown = max(0.0, self.attack_cooldown - dt)
@@ -556,7 +620,7 @@ class HybridGame:
         self.refresh_prompt()
 
     def input(self, key):
-        if self.state == "INTRO": self.show_menu()
+        if self.state == "INTRO": self.finish_intro()
         elif self.state == "MENU" and key in ("enter", "left mouse down"): self.start()
         elif self.state == "PLAY":
             if key == "escape": self.show_menu()
