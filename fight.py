@@ -73,6 +73,10 @@ class FightState:
         pygame.draw.rect(surface, (255, 37, 116), (8, 48, 304, 92), 2); pygame.draw.line(surface, (0, 222, 218), (8, 94), (312, 94), 1)
         self.bar(surface, 12, 12, 115, self.hero.hp / self.hero.max_hp, (0, 232, 190)); self.bar(surface, 193, 12, 115, self.foe.hp / self.foe.max_hp, (255, 52, 93))
         self.game.text(surface, "MAMA", (14, 25), 7, c["paper"]); self.game.text(surface, self.spec.name.upper(), (190, 25), 6, c["paper"]); self.game.text(surface, f"R{self.round_no}  {max(0, int(self.timer)):02d}", (145, 8), 7, c["cream"])
+        if self.hero.attack_time > 0:
+            reach = 18 if self.hero.attack == "punch" else 24
+            pygame.draw.circle(surface, (255, 236, 105), (int(self.hero.x + self.hero.facing * 10), int(self.hero.y)), reach, 2)
+        if self.foe.attack_time > 0: pygame.draw.circle(surface, (255, 52, 93), (int(self.foe.x + self.foe.facing * 10), int(self.foe.y)), 18, 1)
         draw_person(surface, int(self.hero.x), int(self.hero.y), facing=self.hero.facing, kind="girl", flash=self.hit_stop > 0, top_down=True); draw_person(surface, int(self.foe.x), int(self.foe.y), facing=self.foe.facing, kind=self.spec.color, flash=self.hit_stop > 0, top_down=True)
         if self.shake: self.shake -= 1; star_burst(surface, int(self.foe.x), int(self.foe.y), self.shake)
         if self.banner_time: pygame.draw.rect(surface, (255, 41, 103), (84, 38, 152, 22), 2); self.game.text(surface, self.banner, (104, 40), 14, (255, 236, 105))
