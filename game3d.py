@@ -12,8 +12,6 @@ CARS = "assets/user/3d_city/Models/Cars/GLB"
 ROADS = "assets/user/3d_city/Models/Roads/GLB"
 CHARACTERS = "assets/user/3d_arcade/Models/OBJ format"
 NATURE = "assets/user/3d_nature/FULL_VERSION_ALL_MODELS/GLB"
-GRASS_TEXTURE = "assets/user/urban/tiles/tile_0002.png"
-ROAD_TEXTURE = "assets/user/3d_city/Models/Roads/Previews/road-straight.png"
 MAP = "assets/user/city/gliwice_map.png"
 WALK = "assets/user/walk"
 NIGHT = color.rgb32(10, 12, 24)
@@ -71,14 +69,14 @@ class HybridGame:
 
     def create_ui(self):
         self.intro = Text("GREEN-EYE\n\nA GLIWICE CLEANUP STORY\n\nThe city needs a very cheerful cleaner.", parent=camera.ui, origin=(0, 0), y=.06, scale=.055, color=YELLOW)
-        self.map_panel = Entity(parent=camera.ui, model="quad", texture=MAP, scale=(1.72, 1), color=color.rgba32(255, 255, 255, 180), enabled=False)
-        self.menu_card = Entity(parent=camera.ui, model="quad", color=color.rgba32(8, 6, 18, 220), scale=(.62, .78), enabled=False)
+        self.map_panel = Entity(parent=camera.ui, model="quad", texture=MAP, scale=(1.72, 1), color=color.rgba32(255, 255, 255, 255), enabled=False)
+        self.menu_card = Entity(parent=camera.ui, model="quad", color=color.rgba32(8, 6, 18, 248), scale=(.62, .78), enabled=False)
         self.menu = Text("GLIWICE // RYNEK\n\nCLEANUP PROGRESS\n\nENTER  START STREET", parent=camera.ui, origin=(0, 0), y=.08, scale=.045, color=YELLOW, enabled=False)
-        self.hud_bg = Entity(parent=camera.ui, model="quad", position=(0, .455), scale=(.98, .105), color=color.rgba32(8, 12, 24, 235), enabled=False)
-        self.hud = Text("", parent=camera.ui, position=(-.46, .465), scale=.82, color=YELLOW, enabled=False)
-        self.help_bg = Entity(parent=camera.ui, model="quad", position=(0, -.455), scale=(1.08, .105), color=color.rgba32(8, 12, 24, 235), enabled=False)
-        self.help = Text("WASD  DRIVE / WALK     E  EXIT / ENTER / USE     J  CLEANUP HIT     ESC  MAP", parent=camera.ui, position=(-.51, -.465), scale=.68, color=color.white, enabled=False)
-        self.notice_bg = Entity(parent=camera.ui, model="quad", position=(0, -.32), scale=(.7, .1), color=color.rgba32(8, 12, 24, 235), enabled=False)
+        self.hud_bg = Entity(parent=camera.ui, model="quad", position=(0, .455), scale=(.98, .075), color=color.rgba32(8, 12, 24, 245), enabled=False)
+        self.hud = Text("", parent=camera.ui, position=(-.46, .462), scale=.82, color=YELLOW, enabled=False)
+        self.help_bg = Entity(parent=camera.ui, model="quad", position=(0, -.46), scale=(1.08, .07), color=color.rgba32(8, 12, 24, 245), enabled=False)
+        self.help = Text("WASD  DRIVE / WALK     E  EXIT / ENTER / USE     J  CLEANUP HIT     ESC  MAP", parent=camera.ui, position=(-.51, -.467), scale=.68, color=color.white, enabled=False)
+        self.notice_bg = Entity(parent=camera.ui, model="quad", position=(0, -.32), scale=(.62, .07), color=color.rgba32(8, 12, 24, 245), enabled=False)
         self.notice = Text("", parent=camera.ui, origin=(0, 0), y=-.32, scale=.045, color=CYAN, enabled=False)
         self.fight_banner = Text("", parent=camera.ui, origin=(0, 0), y=.22, scale=.085, color=PINK, enabled=False)
         self.quest_panel = Entity(parent=camera.ui, model="quad", color=color.rgb32(18, 14, 32), scale=(.78, .58), enabled=False)
@@ -101,7 +99,7 @@ class HybridGame:
         # where individual road-kit meshes have small tile gaps.
         # Thin horizontal cubes are used instead of planes: in Ursina this makes
         # the XZ orientation explicit, so the green field always fills the map.
-        self.add(Entity(model="cube", position=(0, -.30, 0), scale=(120, .6, 120), texture=GRASS_TEXTURE, texture_scale=(80, 80), shader=unlit_shader, color=color.white))
+        self.add(Entity(model="cube", position=(0, -.30, 0), scale=(120, .6, 120), texture="white_cube", shader=unlit_shader, color=color.rgb32(42, 112, 58)))
         self.add(Entity(model="cube", position=(0, -.005, 0), scale=(66, .08, 8.2), texture="white_cube", shader=unlit_shader, color=color.rgb32(48, 51, 61)))
         self.add(Entity(model="cube", position=(0, 0, 0), scale=(8.2, .08, 52), texture="white_cube", shader=unlit_shader, color=color.rgb32(48, 51, 61)))
         # Real road GLBs, not flat Python rectangles.
