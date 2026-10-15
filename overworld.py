@@ -1,3 +1,4 @@
+import random
 import pygame
 from settings import WIDTH, HEIGHT, COLORS
 from sprites import draw_person
@@ -10,6 +11,7 @@ class OverworldState:
         self.location_index = 0
         self.location_names = ["RYNEK", "UL. ZWYCIESTWA", "UL. DWORCOWA", "DOLNYCH WALOW", "UL. CHORZOWSKA"]
         self.location_notes = ["MARKET SQUARE", "CITY CENTRE", "STATION ROAD", "OLD WALLS", "EAST DISTRICT"]
+        self.story_lines = ["The board called. The city needs a cheerful cleaner.", "Neon signs point east. Someone is making a mess.", "A station contact left one last clue.", "Old walls, new trouble. Keep moving.", "The radio tower is broadcasting the final job."]
         self.pos = pygame.Vector2(112, 112)
         self.enemies = []
         self.spawn_location()
@@ -22,7 +24,9 @@ class OverworldState:
                    [("thug", (70, 126)), ("thug", (212, 42)), ("teen", (270, 126))],
                    [("dealer", (70, 126)), ("teen", (212, 42)), ("thug", (270, 126))],
                    [("dealer", (70, 126)), ("thug", (212, 42)), ("dealer", (270, 126))]]
-        self.enemies = [{"type": kind, "pos": pygame.Vector2(pos), "done": False} for kind, pos in layouts[self.location_index % len(layouts)]]
+        layout = list(layouts[self.location_index % len(layouts)])
+        random.Random(100 + self.location_index).shuffle(layout)
+        self.enemies = [{"type": kind, "pos": pygame.Vector2(pos), "done": False} for kind, pos in layout]
     def handle_event(self, event) -> None:
         if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
             if self.pos.distance_to((58, 35)) < 30: self.game.manager.change("QUEST_BOARD")
@@ -82,8 +86,9 @@ class OverworldState:
             prop = load_image(name, (30, 30))
             if prop: surface.blit(prop, pos)
         pygame.draw.rect(surface, (255, 37, 116), (44, 25, 30, 18)); pygame.draw.rect(surface, (12, 9, 24), (48, 29, 22, 10)); self.label(surface, "CLEANUP HQ", (47, 32), (255, 236, 105))
-        self.game.text(surface, f"GLIWICE // {self.location_names[self.location_index]}", (8, 6), 8, (0, 222, 218))
-        self.game.text(surface, self.location_notes[self.location_index], (232, 6), 6, (255, 178, 71))
+        name_index = self.location_index % len(self.location_names)
+        self.game.text(surface, f"GLIWICE // {self.location_names[name_index]}", (8, 6), 8, (0, 222, 218))
+        self.game.text(surface, self.location_notes[name_index], (232, 6), 6, (255, 178, 71))
         pygame.draw.rect(surface, (255, 37, 116), (int(self.pos.x) - 12, int(self.pos.y) + 10, 24, 2))
         for enemy in self.enemies:
             if not enemy["done"]: draw_person(surface, int(enemy["pos"].x), int(enemy["pos"].y), kind=enemy["type"], scale=1)
@@ -93,4 +98,4 @@ class OverworldState:
             self.game.text(surface, "NEXT", (278, 82), 7, (255, 236, 105))
             self.game.text(surface, self.location_names[(self.location_index + 1) % len(self.location_names)], (269, 92), 5, (0, 222, 218))
             self.game.text(surface, "E", (286, 106), 8, (255, 236, 105))
-        self.game.draw_hud(surface); self.game.text(surface, "WASD / ARROWS MOVE   E INTERACT", (8, 171), 7, (255, 236, 105))
+        self.game.draw_hud(surface); self.game.text(surface, self.story_lines[name_index], (104, 158), 5, (255, 178, 71)); self.game.text(surface, "WASD / ARROWS MOVE   E INTERACT", (8, 171), 7, (255, 236, 105))
