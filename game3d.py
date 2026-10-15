@@ -52,6 +52,8 @@ class HybridGame:
         self.enemies: list[dict] = []
         self.avatar: Entity | None = None
         self.in_car = True
+        self.attack_cooldown = 0.0
+        self.fight_banner_time = 0.0
         self.create_ui()
         self.build_street()
 
@@ -76,6 +78,7 @@ class HybridGame:
         self.help = Text("WASD  DRIVE / WALK     E  EXIT / ENTER / USE     J  CLEANUP HIT     ESC  MAP", parent=camera.ui, position=(-.51, -.465), scale=.68, color=color.white, enabled=False)
         self.notice_bg = Entity(parent=camera.ui, model="quad", position=(0, -.32), scale=(.7, .1), color=color.rgba(8, 12, 24, 235), enabled=False)
         self.notice = Text("", parent=camera.ui, origin=(0, 0), y=-.32, scale=.045, color=CYAN, enabled=False)
+        self.fight_banner = Text("", parent=camera.ui, origin=(0, 0), y=.22, scale=.085, color=PINK, enabled=False)
         self.quest_panel = Entity(parent=camera.ui, model="quad", color=color.rgb(18, 14, 32), scale=(.78, .58), enabled=False)
         self.quest_text = Text("", parent=camera.ui, origin=(0, 0), y=.03, scale=.045, color=YELLOW, enabled=False)
         self.shop_panel = Entity(parent=camera.ui, model="quad", color=color.rgb(18, 14, 32), scale=(.78, .58), enabled=False)
@@ -94,9 +97,10 @@ class HybridGame:
         self.enemies.clear()
         # Continuous grass base and asphalt underlays keep the city readable even
         # where individual road-kit meshes have small tile gaps.
-        self.add(Entity(model="cube", position=(0, -.35, 0), scale=(70, .5, 55), color=color.rgb(42, 112, 58), shader=unlit_shader))
-        self.add(Entity(model="cube", position=(0, -.06, 0), scale=(66, .12, 8.2), color=color.rgb(48, 51, 61), shader=unlit_shader))
-        self.add(Entity(model="cube", position=(0, -.05, 0), scale=(8.2, .12, 52), color=color.rgb(48, 51, 61), shader=unlit_shader))
+        base = dict(texture="white_cube", shader=unlit_shader, double_sided=True)
+        self.add(Entity(model="plane", position=(0, -.32, 0), scale=(100, 100), color=color.rgb(42, 112, 58), **base))
+        self.add(Entity(model="cube", position=(0, -.06, 0), scale=(66, .12, 8.2), color=color.rgb(48, 51, 61), **base))
+        self.add(Entity(model="cube", position=(0, -.05, 0), scale=(8.2, .12, 52), color=color.rgb(48, 51, 61), **base))
         # Real road GLBs, not flat Python rectangles.
         for x in range(-24, 25, 4): self.add(Entity(model=road("road-straight"), position=(x, .03, 0), scale=2.2))
         for z in range(-20, 21, 4): self.add(Entity(model=road("road-straight"), position=(0, .04, z), rotation_y=90, scale=2.2))
@@ -113,8 +117,9 @@ class HybridGame:
             self.add(Entity(model=nature(name), position=pos, scale=size))
         self.shop = self.add(Entity(model=city("building-type-b"), position=(5, 0, 10), scale=2.1, collider="box"))
         self.board = self.add(Entity(model=city("building-type-d"), position=(-5, 0, 10), scale=1.9, collider="box"))
-        self.add(Text("SHOP [E]", world_position=(5, 3.5, 10), billboard=True, scale=1.0, color=CYAN))
-        self.add(Text("QUEST BOARD [E]", world_position=(-5, 3.5, 10), billboard=True, scale=.9, color=YELLOW))
+        for label, pos, tint, width in (("SHOP [E]", (5, 3.5, 10), CYAN, 2.8), ("QUEST BOARD [E]", (-5, 3.5, 10), YELLOW, 4.0)):
+            self.add(Entity(model="quad", position=pos, scale=(width, .7), color=color.rgba(8, 12, 24, 230), billboard=True, double_sided=True))
+            self.add(Text(label, world_position=(pos[0], pos[1], pos[2] - .05), billboard=True, scale=.8, color=tint))
         self.car_entity = Entity(model=car("sedan"), position=(-7, .5, 0), scale=1.25, collider="box")
         self.add(self.car_entity)
         # The supplied packs contain city/vehicle models, but no humanoid GLBs.
@@ -135,6 +140,7 @@ class HybridGame:
     def start(self):
         self.state = "PLAY"
         for item in (self.intro, self.map_panel, self.menu_card, self.menu, self.quest_panel, self.quest_text, self.shop_panel, self.shop_text): item.enabled = False
+        self.fight_banner.enabled = False
         self.hud_bg.enabled = True; self.help_bg.enabled = True; self.notice_bg.enabled = True
         self.hud.enabled = True; self.help.enabled = True; self.notice.enabled = True
         self.notice.text = "3D STREET READY // E EXIT CAR"
@@ -163,6 +169,10 @@ class HybridGame:
             if self.intro_time > 3.0: self.show_menu()
             return
         if self.state != "PLAY": return
+        self.attack_cooldown = max(0.0, self.attack_cooldown - dt)
+        if self.fight_banner_time > 0:
+            self.fight_banner_time -= dt
+            if self.fight_banner_time <= 0: self.fight_banner.enabled = False
         if self.in_car:
             forward = held_keys["w"] - held_keys["s"]
             steer = held_keys["d"] - held_keys["a"]
@@ -195,19 +205,28 @@ class HybridGame:
                 if self.in_car:
                     self.notice.text = "E EXIT CAR TO START A CLEANUP FIGHT"
                     return
+                if self.attack_cooldown > 0: return
+                self.attack_cooldown = .28
+                self.avatar.animate_rotation_y(self.avatar.rotation_y + 18, duration=.08)
                 target = min((e for e in self.enemies if not e["dead"]), key=lambda e: distance(self.avatar, e["entity"]), default=None)
                 if target and distance(self.avatar, target["entity"]) < 3.2:
                     target["hp"] -= 1; self.notice.text = "PAN BONK!"
+                    direction = target["entity"].position - self.avatar.position; direction.y = 0
+                    if direction.length(): target["entity"].animate_position(target["entity"].position + direction.normalized() * 1.3, duration=.12)
+                    target["entity"].animate_color(color.white, duration=.05)
+                    invoke(target["entity"].animate_color, target["tint"], delay=.10, duration=.12)
                     if target["hp"] <= 0:
-                        target["dead"] = True; target["entity"].animate_scale(0, duration=.15); self.coins += 5; self.xp += 10; self.save()
+                        target["dead"] = True; target["entity"].animate_rotation_z(180, duration=.18); target["entity"].animate_scale(0, duration=.2); self.coins += 5; self.xp += 10; self.save()
             elif key == "e" and distance(self.avatar if not self.in_car else self.car_entity, self.shop) < 4: self.open_shop()
             elif key == "e" and distance(self.avatar if not self.in_car else self.car_entity, self.board) < 4: self.open_quest()
             elif key == "e" and self.in_car and self.car_entity.x > 20 and all(e["dead"] for e in self.enemies):
                 self.street += 1; self.build_street(); self.start()
             elif key == "e" and self.in_car:
                 self.in_car = False
-                self.avatar.position = self.car_entity.position + Vec3(1.4, .4, 0)
+                self.avatar.position = self.car_entity.position + Vec3(1.4, -.5, 0)
                 self.avatar.enabled = True
+                self.fight_banner.text = "CLEANUP FIGHT!"
+                self.fight_banner.enabled = True; self.fight_banner_time = 1.2
                 self.notice.text = "ON FOOT // J CLEANUP PAN // E ENTER CAR"
             elif key == "e" and not self.in_car and distance(self.avatar, self.car_entity) < 2.5:
                 self.in_car = True
