@@ -1,6 +1,7 @@
 import pygame
 from settings import WIDTH, HEIGHT, COLORS
 from sprites import draw_person
+from assets import load_image
 
 class OverworldState:
     def __init__(self, game) -> None:
@@ -34,6 +35,11 @@ class OverworldState:
         pygame.draw.rect(surface, c["green"], (0, 24, WIDTH, HEIGHT-24))
         pygame.draw.rect(surface, c["shadow"], (0, 78, WIDTH, 20)); pygame.draw.rect(surface, c["shadow"], (137, 24, 20, HEIGHT-24))
         for x in range(0, WIDTH, 16): pygame.draw.line(surface, (80, 155, 123), (x, 78), (x+8, 98))
+        # Supplied Kenney City Kit preview sprites add readable city landmarks.
+        for name, pos in (("city/building-wide-a.png", (4, 52)), ("city/building-a.png", (82, 52)),
+                          ("city/building-c.png", (164, 52)), ("city/skyscraper-a.png", (270, 48))):
+            prop = load_image(name, (32, 32))
+            if prop: surface.blit(prop, pos)
         pygame.draw.rect(surface, c["orange"], (37, 27, 42, 22)); pygame.draw.rect(surface, c["cream"], (42, 31, 32, 14))
         pygame.draw.rect(surface, c["red"], (48, 22, 20, 8)); pygame.draw.rect(surface, c["ink"], (54, 9, 8, 14))
         pygame.draw.rect(surface, c["yellow"], (246, 27, 16, 30)); pygame.draw.rect(surface, c["ink"], (252, 11, 4, 18))

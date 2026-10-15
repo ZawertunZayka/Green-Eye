@@ -75,7 +75,7 @@ class Game:
             for event in pygame.event.get():
                 if event.type == pygame.QUIT: running = False
                 else: self.manager.handle_event(event)
-            self.manager.update(dt); self.manager.draw(self.canvas); pygame.transform.scale(self.canvas, self.window, self.window); pygame.display.flip()
+            self.manager.update(dt); self.manager.draw(self.canvas); pygame.transform.scale(self.canvas, self.window.get_size(), self.window); pygame.display.flip()
         self.save(); pygame.quit()
 
 if __name__ == "__main__": Game().run()
