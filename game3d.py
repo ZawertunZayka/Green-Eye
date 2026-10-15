@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 from ursina import *
+from ursina.shaders import unlit_shader
 
 ROOT = Path(__file__).parent
 SAVE = ROOT / "save.json"
@@ -238,7 +239,6 @@ def create_app():
     global app, game
     app = Ursina(borderless=False, development_mode=False)
     window.title = "Green-Eye // Gliwice 3D Streets"; window.color = NIGHT; scene.fog_color = NIGHT
-    Sky(color=color.rgb(16, 20, 35))
     AmbientLight(color=color.rgba(110, 110, 110, 1))
     DirectionalLight(rotation=(45, -45, 45), color=color.rgba(150, 150, 150, 1))
     game = HybridGame(); game.run()
