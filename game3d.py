@@ -91,8 +91,8 @@ class HybridGame:
         self.map_panel = Entity(parent=camera.ui, model="quad", texture=MAP, scale=(1.72, 1), color=color.rgba32(255, 255, 255, 255), enabled=False)
         self.menu_card = Entity(parent=camera.ui, model="quad", color=color.rgba32(8, 6, 18, 248), scale=(.62, .78), enabled=False)
         self.menu = Text("GLIWICE // RYNEK\n\nCLEANUP PROGRESS\n\n3 STREET CAMPAIGN\n\nENTER / LEFT CLICK  START", parent=camera.ui, origin=(0, 0), y=.08, scale=.045, color=YELLOW, enabled=False)
-        self.hud_bg = Entity(parent=camera.ui, model="quad", position=(0, .455), scale=(.98, .075), color=color.rgba32(8, 12, 24, 245), enabled=False)
-        self.hud = Text("", parent=camera.ui, position=(-.46, .462), scale=.72, color=YELLOW, enabled=False)
+        self.hud_bg = Entity(parent=camera.ui, model="quad", position=(0, .455), scale=(.98, .06), color=color.rgba32(8, 12, 24, 235), enabled=False)
+        self.hud = Text("", parent=camera.ui, position=(-.46, .462), scale=.68, color=YELLOW, enabled=False)
         self.objective_bg = Entity(parent=camera.ui, model="quad", position=(-.33, .335), scale=(.48, .095), color=color.rgba32(8, 12, 24, 235), enabled=False)
         self.objective = Text("", parent=camera.ui, position=(-.55, .355), scale=.62, color=CYAN, enabled=False)
         self.help_bg = Entity(parent=camera.ui, model="quad", position=(0, -.46), scale=(1.08, .07), color=color.rgba32(8, 12, 24, 245), enabled=False)
@@ -310,8 +310,8 @@ class HybridGame:
         self.state = "PLAY"
         for item in (self.intro, self.map_panel, self.menu_card, self.menu, self.quest_panel, self.quest_text, self.shop_panel, self.shop_text, self.win_panel, self.win_text): item.enabled = False
         self.fight_banner.enabled = False
-        self.hud_bg.enabled = True; self.help_bg.enabled = True; self.notice_bg.enabled = True
-        self.hud.enabled = True; self.help.enabled = True; self.notice.enabled = True; self.objective_bg.enabled = True; self.objective.enabled = True
+        self.hud_bg.enabled = True; self.notice_bg.enabled = True
+        self.hud.enabled = True; self.notice.enabled = True
         self.notice.text = "READY // PRESS E TO LEAVE THE CAR"
 
     def show_menu(self):
@@ -386,7 +386,7 @@ class HybridGame:
             delta.y = 0
             if delta.length() > 3 and delta.length() < 16: enemy["entity"].position += delta.normalized() * 1.2 * dt
         mode = "DRIVING" if self.in_car else "ON FOOT"
-        self.hud.text = f"GLIWICE  |  LEVEL {self.street + 1}/3  |  UL. {self.LEVEL_NAMES[self.street]}  |  COINS {self.coins}  |  XP {self.xp}  |  {mode}"
+        self.hud.text = f"GLIWICE  |  L{self.street + 1}/3  |  {self.LEVEL_NAMES[self.street]}  |  COINS {self.coins}  |  XP {self.xp}  |  {mode}"
         remaining = sum(not enemy["dead"] for enemy in self.enemies)
         objective = "DEFEAT THE ZSTI BOSS" if self.street == 2 else "CLEAR THE STREET"
         self.objective.text = f"OBJECTIVE\n{objective}  [{remaining} LEFT]"
