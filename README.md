@@ -1,38 +1,103 @@
-# Green-Eye: All Tidy Now!
+# Green-Eye // Gliwice Cleanup
 
-A 3D cartoon cleanup game using Ursina, with three stages and a fictional final boss at ZSTI. Asset credits are in CREDITS.md.
+![Gliwice map](assets/user/city/gliwice_map.png)
 
-The gameplay camera uses a wider 65-degree field of view.
+Green-Eye is a small 3D arcade action game set in a stylised version of Gliwice. The player is a cheerful city cleaner who travels through local streets, leaves the car, fights hostile skeletons and zombies with colourful cleanup weapons, earns coins and upgrades, and eventually reaches the ZSTI school boss arena.
 
-The city stages contain dense residential blocks, greenery, street furniture, parked traffic and larger enemy groups. The final boss is protected by four guards.
+The project combines Ursina/Panda3D 3D models with a readable arcade HUD. It has a complete playable loop: intro animation, menu, three connected stages, driving, walking, shooting, enemy projectiles, target lock, shop, inventory, upgrades, minimap, boss fight and save data.
 
-Each stage has its own identity: Zwyciestwa is a green residential district, Dworcowa is a darker station district with a forecourt and roadworks, and ZSTI is a fenced school battle arena.
+## Features
 
-At launch, a short skippable 3D cinematic shows zombies and skeletons taking over the streets of Gliwice before the main menu appears.
+- Three locations: residential **ul. Zwycięstwa**, darker **ul. Dworcowa**, and the final **ZSTI School** arena.
+- Skippable opening animation showing the undead invasion of the city.
+- 3D city, road, car, character, nature and enemy assets loaded from local asset packs.
+- Enter and leave the car; the player model is hidden while driving.
+- Car acceleration, braking, steering, building collision and traffic collision.
+- Impact physics: when the player's car hits another car, the other car receives an impulse, slides away, rotates and slows down.
+- On-foot cleanup combat with mouse aiming, target lock, homing assistance near enemies and projectile effects.
+- Slow enemy projectiles that can be dodged.
+- Cleanup Pan, Rolling Pin and Soup Blaster weapons.
+- Shop, numbered hotbar inventory, coins, XP and end-of-level upgrade cards.
+- Health bar, minimap, contextual prompts and boss health bar.
+- Progress saved to `save.json`.
 
-## Run
+## Requirements
 
-    python3 -m venv .venv
-    .venv/bin/python -m pip install -r requirements.txt
-    .venv/bin/python main.py
+- Python 3.10 or newer
+- Packages from `requirements.txt`
+- Desktop with an OpenGL-capable graphics driver
 
-The current entry point is main.py → game3d.py. Other Python modules are retained legacy 2D code, not imported by the 3D game.
+## Run on Linux
+
+```bash
+cd /home/zawe/Green-Eye
+python3 -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+.venv/bin/python main.py
+```
+
+The system Python may reject global pip installs with the PEP 668 “externally managed environment” message. The virtual-environment commands above avoid that problem.
 
 ## Controls
 
-- Esc: pause/menu with controls and progress; Enter: continue.
-- WASD: walk; hold Shift to run. S/W: drive forward/reverse; A/D: steer.
-- Mouse: aim; J or left click: shoot; Tab: toggle nearest-enemy lock.
-- Weapon inventory: a Minecraft-style hotbar appears at the bottom of the gameplay screen. Use 1–3 to equip an owned weapon. Buy Rolling Pin and Soup Blaster at the shop using 1–3.
-- After clearing a city level, choose one of three upgrade cards with 1–3 or the mouse.
-- E: nearby shop/board, enter or leave the car.
-- Clear the stage, drive east past x=20 and press E to continue.
-- Shop: P buys a damage upgrade for 30 coins (maximum three upgrades).
+| Input | Action |
+|---|---|
+| `WASD` | Walk on foot |
+| `Shift` | Run |
+| `S` / `W` | Drive forward / reverse |
+| `A` / `D` | Steer |
+| `E` | Enter/leave car, use shop or quest board, continue east |
+| Mouse / `J` | Aim and fire |
+| `Tab` | Lock onto the nearest enemy |
+| `1`–`3` | Select a weapon or upgrade card |
+| `P` | Buy a pan damage upgrade in the shop |
+| `Esc` | Pause/menu |
+| `Enter` | Continue or restart |
 
-The gameplay view keeps only useful information visible: health, minimap, contextual interaction prompt and target marker. Brief story cards introduce each stage and disappear automatically. The final ZSTI arena shows the boss name and health bar. Statistics and controls are in the pause menu; there are no permanent city/street labels or shot notifications.
+## Game flow
 
-The gameplay HUD includes player health and a compact minimap. Enemies damage the player at close range while on foot; after defeat, Enter restarts the current street with full health.
+1. Skip or watch the intro animation.
+2. Start at the car on ul. Zwycięstwa.
+3. Leave the car, clear enemies, and use the shop or job board.
+4. Return to the car and drive east to unlock the next street.
+5. Choose one of three upgrade cards after clearing a stage.
+6. Reach ZSTI and defeat the Principal of Disorder and the guards.
 
-Enemies also fire slow, non-homing projectiles at long intervals when you are on foot. Step aside to avoid them.
+Traffic vehicles are physical objects. A fast impact pushes the other car away, while walls and buildings stop the player vehicle.
 
-Coins, XP and upgrades are saved to save.json. Replaying retains these rewards. Existing unrelated save fields are preserved. The job board reports remaining enemies and the per-target reward.
+## Project structure
+
+```text
+main.py       application entry point
+game3d.py     3D game loop, states, city, driving and combat
+assets.py     legacy asset-loading helpers
+settings.py   shared settings/constants
+sound.py      sound helpers
+overworld.py  legacy 2D overworld slice
+fight.py      legacy 2D fight slice
+quests.py     quest data
+sprites.py    legacy sprite helpers
+assets/user/  user-provided assets, highest priority
+assets/found/ free/found assets
+assets/generated/ procedural fallbacks
+```
+
+The current executable entry point is `main.py`, which starts `game3d.py`. The older 2D modules remain as the original prototype architecture and are not imported by the current 3D entry point.
+
+## Assets and licensing
+
+User-provided assets are kept under `assets/user/` and are never overwritten by the game. The city, car, road, character, nature and KayKit skeleton packs are used as local 3D content. See [CREDITS.md](CREDITS.md) for source and license information.
+
+![City map used by the menu](assets/user/city/gliwice_map.png)
+
+The Gliwice map is used as the menu/map reference. Missing or incompatible nature tree materials are avoided by using textured City Kit tree models for visible trees.
+
+## Saving and troubleshooting
+
+- Delete `save.json` only if you intentionally want to reset coins, XP and unlocked weapons.
+- If a window opens white or does not appear, run from the virtual environment and check the terminal for the first actual traceback.
+- `AL lib`/PulseAudio warnings are safe when the system has no audio device; Ursina falls back to a null audio manager.
+
+## Latest update
+
+The latest build includes stronger traffic collision physics. The player car is allowed to make contact with traffic instead of being blocked by an invisible radius; the struck car receives a visible knockback impulse and friction-based slowdown. The build was syntax-checked and launched through a virtual display before being pushed to `main`.
