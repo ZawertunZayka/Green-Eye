@@ -3,6 +3,7 @@ import pygame
 from settings import WIDTH, HEIGHT, COLORS
 from sprites import draw_person, star_burst
 from enemies import ENEMY_TYPES
+from assets import load_image
 
 class Fighter:
     def __init__(self, x: float, y: float, spec, player: bool) -> None:
@@ -87,10 +88,10 @@ class FightState:
         if won: self.enemy_ref["done"] = True; self.game.complete_enemy(self.spec.name); self.game.manager.change("OVERWORLD")
         else: self.game.manager.change("GAME_OVER")
     def draw(self, surface: pygame.Surface) -> None:
-        c = COLORS; surface.fill((12, 9, 24)); pygame.draw.rect(surface, (25, 16, 48), (0, 45, WIDTH, 100))
-        for x in range(0, WIDTH, 16): pygame.draw.line(surface, (49, 24, 74), (x, 45), (x, 145), 1)
-        for y in range(45, 146, 16): pygame.draw.line(surface, (49, 24, 74), (0, y), (WIDTH, y), 1)
-        pygame.draw.rect(surface, (255, 37, 116), (8, 48, 304, 92), 2); pygame.draw.line(surface, (0, 222, 218), (8, 94), (312, 94), 1)
+        c = COLORS
+        arena = load_image("city/gliwice_map.png", (WIDTH, HEIGHT))
+        surface.blit(arena, (0, 0))
+        pygame.draw.rect(surface, (10, 8, 23), (8, 48, 304, 92), 2)
         self.bar(surface, 12, 12, 115, self.hero.hp / self.hero.max_hp, (0, 232, 190)); self.bar(surface, 193, 12, 115, self.foe.hp / self.foe.max_hp, (255, 52, 93))
         self.game.text(surface, "MAMA", (14, 25), 7, c["paper"]); self.game.text(surface, self.spec.name.upper(), (190, 25), 6, c["paper"]); self.game.text(surface, f"R{self.round_no}  {max(0, int(self.timer)):02d}", (145, 8), 7, c["cream"])
         if self.hero.attack_time > 0:
