@@ -75,7 +75,7 @@ class HybridGame:
         self.hud_bg = Entity(parent=camera.ui, model="quad", position=(0, .455), scale=(.98, .075), color=color.rgba32(8, 12, 24, 245), enabled=False)
         self.hud = Text("", parent=camera.ui, position=(-.46, .462), scale=.82, color=YELLOW, enabled=False)
         self.help_bg = Entity(parent=camera.ui, model="quad", position=(0, -.46), scale=(1.08, .07), color=color.rgba32(8, 12, 24, 245), enabled=False)
-        self.help = Text("WASD  DRIVE / WALK     E  EXIT / ENTER / USE     J  CLEANUP HIT     ESC  MAP", parent=camera.ui, position=(-.51, -.467), scale=.68, color=color.white, enabled=False)
+        self.help = Text("S  DRIVE FORWARD   W  REVERSE   A/D  STEER   E  EXIT / ENTER   J  CLEANUP HIT", parent=camera.ui, position=(-.51, -.467), scale=.68, color=color.white, enabled=False)
         self.notice_bg = Entity(parent=camera.ui, model="quad", position=(0, -.32), scale=(.62, .07), color=color.rgba32(8, 12, 24, 245), enabled=False)
         self.notice = Text("", parent=camera.ui, origin=(0, 0), y=-.32, scale=.045, color=CYAN, enabled=False)
         self.fight_banner = Text("", parent=camera.ui, origin=(0, 0), y=.22, scale=.085, color=PINK, enabled=False)
@@ -175,7 +175,7 @@ class HybridGame:
             self.fight_banner_time -= dt
             if self.fight_banner_time <= 0: self.fight_banner.enabled = False
         if self.in_car:
-            forward = held_keys["w"] - held_keys["s"]
+            forward = held_keys["s"] - held_keys["w"]
             steer = held_keys["d"] - held_keys["a"]
             if forward: self.car_entity.position += self.car_entity.forward * forward * 8 * dt
             self.car_entity.rotation_y += steer * 100 * dt
