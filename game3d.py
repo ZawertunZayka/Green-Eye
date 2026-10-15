@@ -200,20 +200,21 @@ class HybridGame:
         self.hp_text = Text("HP 100 / 100", parent=camera.ui, position=(-.465, .455), scale=.58,
                             color=color.white, enabled=False)
         # Minecraft-style quick bar: every owned weapon has a visible numbered slot.
-        self.hotbar = Entity(parent=camera.ui, model="quad", position=(0, -.365, -.01), scale=(.56, .165),
+        self.hotbar = Entity(parent=camera.ui, model="quad", position=(0, -.365, -.01), scale=(.62, .205),
                              color=color.rgba32(8, 12, 24, 235), enabled=False)
-        self.hotbar_info = Text("", parent=self.hotbar, origin=(0, 0), y=.58, z=-.06, scale=.62, color=YELLOW)
+        self.hotbar_info = Text("", parent=self.hotbar, origin=(0, 0), y=.58, z=-.06, scale=.78, color=YELLOW)
         self.hotbar_slots: list[dict] = []
         labels = ("PAN", "PIN", "SOUP")
-        for index, (x, weapon, label) in enumerate(zip((-.32, 0, .32), self.WEAPONS, labels)):
+        for index, (x, weapon, label) in enumerate(zip((-.34, 0, .34), self.WEAPONS, labels)):
             # Every opaque UI layer gets a distinct depth. Without this, the
             # GPU alternates between the frame and its face (z-fighting).
-            frame = Entity(parent=self.hotbar, model="quad", position=(x, 0, -.02), scale=(.27, .76), color=color.rgb32(65, 70, 85))
+            frame = Entity(parent=self.hotbar, model="quad", position=(x, 0, -.02), scale=(.29, .80), color=color.rgb32(65, 70, 85))
             face = Entity(parent=frame, model="quad", z=-.02, scale=(.84, .84), color=color.rgb32(20, 25, 38))
-            Text(str(index + 1), parent=frame, x=-.35, y=.29, z=-.06, scale=.65, color=color.white)
-            icon = Text(label, parent=frame, origin=(0, 0), y=.04, z=-.06, scale=.64, color=weapon["color"])
-            state = Text("", parent=frame, origin=(0, 0), y=-.27, z=-.06, scale=.35, color=color.white)
-            self.hotbar_slots.append({"frame": frame, "face": face, "icon": icon, "state": state, "weapon": weapon})
+            Text(str(index + 1), parent=frame, x=-.38, y=.30, z=-.06, scale=.82, color=color.white)
+            icon = self.make_weapon_icon(frame, index, weapon["color"])
+            name = Text(label, parent=frame, origin=(0, 0), y=-.02, z=-.10, scale=.70, color=weapon["color"])
+            state = Text("", parent=frame, origin=(0, 0), y=-.30, z=-.06, scale=.48, color=color.white)
+            self.hotbar_slots.append({"frame": frame, "face": face, "icon": icon, "name": name, "state": state, "weapon": weapon})
         self.minimap = Entity(parent=camera.ui, model="quad", position=(.405, .33), scale=(.19, .24),
                               color=color.rgba32(8, 12, 24, 225), enabled=False)
         Entity(parent=self.minimap, model="quad", scale=(.94, .17), color=color.rgb32(62, 66, 78), z=-.02)
@@ -221,6 +222,22 @@ class HybridGame:
         self.minimap_player = Entity(parent=self.minimap, model="circle", scale=.085, color=CYAN, z=-.05)
         self.minimap_exit = Entity(parent=self.minimap, model="quad", position=(.44, 0, -.04), scale=(.035, .18), color=YELLOW)
         self.minimap_enemy_dots: list[Entity] = []
+
+    def make_weapon_icon(self, parent, index, tint):
+        """Build a readable 3D weapon silhouette for the hotbar."""
+        icon = Entity(parent=parent, position=(0, .17, -.08), scale=.18, color=tint)
+        if index == 0:  # frying pan
+            Entity(parent=icon, model="cube", scale=(1.35, .16, 1.35), rotation_x=90, color=tint)
+            Entity(parent=icon, model="cube", position=(1.05, 0, 0), scale=(1.5, .22, .22), color=color.rgb32(120, 75, 45))
+        elif index == 1:  # rolling pin
+            Entity(parent=icon, model="cube", scale=(.35, 1.8, .35), rotation_z=90, color=tint)
+            Entity(parent=icon, model="cube", position=(-1.15, 0, 0), scale=(.28, .55, .28), color=color.rgb32(160, 95, 55))
+            Entity(parent=icon, model="cube", position=(1.15, 0, 0), scale=(.28, .55, .28), color=color.rgb32(160, 95, 55))
+        else:  # soup blaster: body, barrel and grip
+            Entity(parent=icon, model="cube", scale=(1.35, .62, .55), color=tint)
+            Entity(parent=icon, model="cube", position=(1.0, .05, 0), scale=(1.25, .22, .22), color=color.white)
+            Entity(parent=icon, model="cube", position=(-.25, -.75, 0), scale=(.28, .85, .28), color=color.rgb32(45, 55, 75))
+        return icon
 
     def add(self, entity):
         self.scene_entities.append(entity)
