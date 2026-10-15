@@ -205,20 +205,21 @@ class HybridGame:
         self.hp_text = Text("HP 100 / 100", parent=camera.ui, position=(-.465, .455), scale=.58,
                             color=color.white, enabled=False)
         # Minecraft-style quick bar: every owned weapon has a visible numbered slot.
-        self.hotbar = Entity(parent=camera.ui, model="quad", position=(0, -.365, -.01), scale=(.62, .205),
+        # Vertical inventory on the left keeps the centre of the gameplay view clear.
+        self.hotbar = Entity(parent=camera.ui, model="quad", position=(-.73, -.02, -.01), scale=(.24, .70),
                              color=color.rgba32(8, 12, 24, 235), enabled=False)
-        self.hotbar_info = Text("", parent=self.hotbar, origin=(0, 0), y=.58, z=-.06, scale=.78, color=YELLOW)
+        self.hotbar_info = Text("", parent=self.hotbar, origin=(0, 0), y=.57, z=-.06, scale=.68, color=YELLOW)
         self.hotbar_slots: list[dict] = []
         labels = ("PAN", "PIN", "SOUP")
-        for index, (x, weapon, label) in enumerate(zip((-.34, 0, .34), self.WEAPONS, labels)):
+        for index, (y, weapon, label) in enumerate(zip((.27, 0, -.27), self.WEAPONS, labels)):
             # Every opaque UI layer gets a distinct depth. Without this, the
             # GPU alternates between the frame and its face (z-fighting).
-            frame = Entity(parent=self.hotbar, model="quad", position=(x, 0, -.02), scale=(.29, .80), color=color.rgb32(65, 70, 85))
+            frame = Entity(parent=self.hotbar, model="quad", position=(0, y, -.02), scale=(.82, .24), color=color.rgb32(65, 70, 85))
             face = Entity(parent=frame, model="quad", z=-.02, scale=(.84, .84), color=color.rgb32(20, 25, 38))
-            Text(str(index + 1), parent=frame, x=-.38, y=.30, z=-.06, scale=.82, color=color.white)
+            Text(str(index + 1), parent=frame, x=-.40, y=.02, z=-.06, scale=.58, color=color.white)
             icon = self.make_weapon_icon(frame, index, weapon["color"])
-            name = Text(label, parent=frame, origin=(0, 0), y=-.02, z=-.10, scale=.70, color=weapon["color"])
-            state = Text("", parent=frame, origin=(0, 0), y=-.30, z=-.06, scale=.48, color=color.white)
+            name = Text(label, parent=frame, x=.10, y=.025, z=-.10, scale=.48, color=weapon["color"])
+            state = Text("", parent=frame, x=.10, y=-.075, z=-.06, scale=.34, color=color.white)
             self.hotbar_slots.append({"frame": frame, "face": face, "icon": icon, "name": name, "state": state, "weapon": weapon})
         self.minimap = Entity(parent=camera.ui, model="quad", position=(.405, .33), scale=(.19, .24),
                               color=color.rgba32(8, 12, 24, 225), enabled=False)
@@ -230,7 +231,7 @@ class HybridGame:
 
     def make_weapon_icon(self, parent, index, tint):
         """Build a readable 3D weapon silhouette for the hotbar."""
-        icon = Entity(parent=parent, position=(0, .17, -.08), scale=.18, color=tint)
+        icon = Entity(parent=parent, position=(-.16, 0, -.08), scale=.105, color=tint)
         if index == 0:  # frying pan
             Entity(parent=icon, model="cube", scale=(1.35, .16, 1.35), rotation_x=90, color=tint)
             Entity(parent=icon, model="cube", position=(1.05, 0, 0), scale=(1.5, .22, .22), color=color.rgb32(120, 75, 45))
