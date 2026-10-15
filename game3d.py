@@ -141,7 +141,7 @@ class HybridGame:
             self.traffic.append(Entity(model=car(name), position=pos, rotation_y=rotation, scale=1.2))
         enemy_setup = (("bruiser", (11, 0, -5), PINK, "Warrior"), ("punk", (14, 0, 6), CYAN, "Rogue"), ("businessman", (-12, 0, -5), color.orange, "Mage"))
         for kind, pos, tint, model_name in enemy_setup:
-            enemy = Entity(model=skeleton(model_name), position=pos, rotation_x=-90, scale=.65, color=tint)
+            enemy = Entity(model=skeleton(model_name), position=pos, rotation_x=0, scale=.65, color=tint)
             self.enemies.append({"entity": enemy, "kind": kind, "hp": 2, "dead": False, "tint": tint})
         self.add(Text(f"UL. {['ZWYCIESTWA', 'DWORCOWA', 'DOLNYCH WALOW', 'CHORZOWSKA', 'RYNEK'][self.street % 5]}", world_position=(-2, 4, -1), billboard=True, scale=1.0, color=YELLOW))
         camera.position = (-7, 19, -18); camera.look_at(self.car_entity.position)
