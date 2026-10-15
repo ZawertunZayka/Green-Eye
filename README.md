@@ -1,5 +1,14 @@
 # Green-Eye // Gliwice Cleanup
 
+## Gameplay video
+
+<video controls width="720" preload="metadata">
+  <source src="assets/user/media/gameplay-video.mp4" type="video/mp4">
+  Your browser does not support embedded video. [Open the gameplay video directly](assets/user/media/gameplay-video.mp4).
+</video>
+
+[▶ Watch the gameplay recording](assets/user/media/gameplay-video.mp4)
+
 ![Gliwice map](assets/user/city/gliwice_map.png)
 
 Green-Eye is a small 3D arcade action game set in a stylised version of Gliwice. The player is a cheerful city cleaner who travels through local streets, leaves the car, fights hostile skeletons and zombies with colourful cleanup weapons, earns coins and upgrades, and eventually reaches the ZSTI school boss arena.
