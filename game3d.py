@@ -4,6 +4,8 @@ import json
 from pathlib import Path
 from ursina import *
 from ursina.shaders import unlit_shader
+from panda3d.core import NodePath
+import gltf
 
 ROOT = Path(__file__).parent
 SAVE = ROOT / "save.json"
@@ -12,6 +14,7 @@ CARS = "assets/user/3d_city/Models/Cars/GLB"
 ROADS = "assets/user/3d_city/Models/Roads/GLB"
 CHARACTERS = "assets/user/3d_arcade/Models/OBJ format"
 NATURE = "assets/user/3d_nature/FULL_VERSION_ALL_MODELS/GLB"
+SKELETONS = "assets/user/3d_skeletons/KayKit_Skeletons_1.1_FREE/characters/gltf"
 MAP = "assets/user/city/gliwice_map.png"
 WALK = "assets/user/walk"
 NIGHT = color.rgb32(10, 12, 24)
@@ -38,6 +41,11 @@ def character(name):
 
 def nature(name):
     return f"{NATURE}/{name}.glb"
+
+
+def skeleton(name):
+    # KayKit exports these models with Z as up; Ursina's street uses Y as up.
+    return NodePath(gltf.load_model(f"{SKELETONS}/Skeleton_{name}.glb"))
 
 
 class HybridGame:
@@ -131,9 +139,9 @@ class HybridGame:
         self.in_car = True
         for name, pos, rotation in (("taxi", (-15, .45, 0), 0), ("police", (11, .45, 0), 0), ("van", (0, .45, 12), 90), ("delivery", (0, .45, -12), 90)):
             self.traffic.append(Entity(model=car(name), position=pos, rotation_y=rotation, scale=1.2))
-        enemy_setup = (("bruiser", (11, 0, -5), PINK, "character-employee"), ("punk", (14, 0, 6), CYAN, "character-gamer"), ("businessman", (-12, 0, -5), color.orange, "character-employee"))
+        enemy_setup = (("bruiser", (11, 0, -5), PINK, "Warrior"), ("punk", (14, 0, 6), CYAN, "Rogue"), ("businessman", (-12, 0, -5), color.orange, "Mage"))
         for kind, pos, tint, model_name in enemy_setup:
-            enemy = Entity(model=character(model_name), position=pos, scale=2.25, color=tint)
+            enemy = Entity(model=skeleton(model_name), position=pos, rotation_x=-90, scale=.9, color=tint)
             self.enemies.append({"entity": enemy, "kind": kind, "hp": 2, "dead": False, "tint": tint})
         self.add(Text(f"UL. {['ZWYCIESTWA', 'DWORCOWA', 'DOLNYCH WALOW', 'CHORZOWSKA', 'RYNEK'][self.street % 5]}", world_position=(-2, 4, -1), billboard=True, scale=1.0, color=YELLOW))
         camera.position = (-7, 19, -18); camera.look_at(self.car_entity.position)
