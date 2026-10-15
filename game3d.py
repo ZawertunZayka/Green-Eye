@@ -179,7 +179,7 @@ class HybridGame:
         # The OBJ loader is compatible with this Ursina/glTF version; provide the
         # shared Kenney colormap explicitly because the MTL uses a relative path.
         self.avatar = self.add(Entity(model=character("character-gamer"), texture=f"{CHARACTERS}/Textures/colormap.png", position=(-5.5, 0, 0), scale=2.25))
-        self.avatar.enabled = True
+        self.avatar.enabled = False
         self.in_car = True
         for name, pos, rotation in (("taxi", (-15, .45, 0), 0), ("police", (11, .45, 0), 0), ("van", (0, .45, 12), 90), ("delivery", (0, .45, -12), 90)):
             self.traffic.append(Entity(model=car(name), position=pos, rotation_y=rotation, scale=1.2))
@@ -240,13 +240,7 @@ class HybridGame:
             self.car_entity.rotation_y += steer * 100 * dt
             self.car_entity.x = clamp(self.car_entity.x, -28, 28); self.car_entity.z = clamp(self.car_entity.z, -22, 22)
             actor = self.car_entity
-            # The player stays outside the car and follows it like a companion.
-            self.avatar.enabled = True
-            # The sedan mesh faces opposite to its local forward axis, so the
-            # positive offset is the visual rear of the car in this scene.
-            self.avatar.position = self.car_entity.position + self.car_entity.forward * 3.0 + self.car_entity.right * .8 + Vec3(0, -.5, 0)
-            to_car = self.car_entity.position - self.avatar.position
-            self.avatar.rotation_y = math.degrees(math.atan2(to_car.x, to_car.z))
+            self.avatar.enabled = False
         else:
             actor = self.avatar
             direction = Vec3(held_keys["d"] - held_keys["a"], 0, held_keys["w"] - held_keys["s"])
@@ -310,7 +304,7 @@ class HybridGame:
                 self.notice.text = "ON FOOT // J CLEANUP PAN // E ENTER CAR"
             elif key == "e" and not self.in_car and distance(self.avatar, self.car_entity) < 2.5:
                 self.in_car = True
-                self.avatar.enabled = True
+                self.avatar.enabled = False
                 self.notice.text = "BACK IN CAR // DRIVE TO THE NEXT STREET"
         elif self.state == "QUEST":
             if key in ("e", "escape"): self.start()
