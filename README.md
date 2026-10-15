@@ -1,18 +1,24 @@
 # Green-Eye: All Tidy Now!
 
-A tiny 2D pixel-art cleanup comedy game set in a stylized Gliwice. The cheerful apron-wearing heroine treats cartoon bad guys as city trash: defeated opponents pop into stars, with no blood or gore.
+A 3D cartoon cleanup game using Ursina, with three stages and a fictional final boss at ZSTI. Asset credits are in CREDITS.md.
 
 ## Run
 
-    python3 -m pip install -r requirements.txt
-    python main.py
+    python3 -m venv .venv
+    .venv/bin/python -m pip install -r requirements.txt
+    .venv/bin/python main.py
 
-`pygame-ce` is used because it provides the normal `pygame` import and prebuilt wheels for current Python versions, avoiding a local SDL source build.
+The current entry point is main.py → game3d.py. Other Python modules are retained legacy 2D code, not imported by the 3D game.
 
 ## Controls
 
-- Menu: Enter
-- Overworld: WASD / arrow keys to move, E at the board to accept a job
-- Fight: WASD / arrow keys move, left mouse shoots, J punch, K kick, L cooking special, Space block
+- Esc: pause/menu with controls and progress; Enter: continue.
+- WASD: walk. S/W: drive forward/reverse; A/D: steer.
+- Mouse: aim; J or left click: shoot; Tab: toggle nearest-enemy lock.
+- E: nearby shop/board, enter or leave the car.
+- Clear the stage, drive east past x=20 and press E to continue.
+- Shop: P buys a damage upgrade for 30 coins (maximum three upgrades).
 
-The current vertical slice includes the quest board, a Gliwice-inspired overworld with Rynek, station, park, blocks and radio tower landmarks, and best-of-three fights against three enemy types. Progress is saved to save.json.
+The gameplay view has only a contextual interaction prompt and a small target marker. Statistics and controls are in the pause menu. There are no permanent city/street labels or shot notifications.
+
+Coins, XP and upgrades are saved to save.json. Replaying retains these rewards. Existing unrelated save fields are preserved. The job board reports remaining enemies and the per-target reward.

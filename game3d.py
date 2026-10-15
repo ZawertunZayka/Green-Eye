@@ -61,6 +61,7 @@ class HybridGame:
         self.state = "INTRO"
         self.intro_time = 0.0
         self.street = 0
+        self.weapon_level = 0
         self.coins, self.xp = self.load_progress()
         self.scene_entities: list[Entity] = []
         self.traffic: list[Entity] = []
@@ -79,33 +80,46 @@ class HybridGame:
     def load_progress(self):
         try:
             data = json.loads(SAVE.read_text())
+            if not isinstance(data, dict):
+                return 0, 0
+            self.weapon_level = max(0, min(3, int(data.get("weapon_level", 0))))
             return int(data.get("coins", 0)), int(data.get("xp", 0))
         except (OSError, ValueError, TypeError):
             return 0, 0
 
     def save(self):
-        SAVE.write_text(json.dumps({"coins": self.coins, "xp": self.xp}, indent=2))
+        data = {}
+        try:
+            previous = json.loads(SAVE.read_text())
+            if isinstance(previous, dict):
+                data = previous
+        except (OSError, ValueError):
+            pass
+        data.update(coins=self.coins, xp=self.xp, weapon_level=self.weapon_level)
+        temporary = SAVE.with_suffix(".tmp")
+        temporary.write_text(json.dumps(data, indent=2))
+        temporary.replace(SAVE)
 
     def create_ui(self):
-        self.intro = Text("GREEN-EYE\n\nA GLIWICE CLEANUP STORY\n\nThe city needs a very cheerful cleaner.", parent=camera.ui, origin=(0, 0), y=.06, scale=.055, color=YELLOW)
+        self.intro = Text("GREEN-EYE\n\nAll tidy now!\n\nPress any key", parent=camera.ui, origin=(0, 0), y=.06, scale=1.5, color=YELLOW)
         self.map_panel = Entity(parent=camera.ui, model="quad", texture=MAP, scale=(1.72, 1), color=color.rgba32(255, 255, 255, 255), enabled=False)
         self.menu_card = Entity(parent=camera.ui, model="quad", color=color.rgba32(8, 6, 18, 248), scale=(.62, .78), enabled=False)
-        self.menu = Text("GLIWICE // RYNEK\n\nCLEANUP PROGRESS\n\n3 STREET CAMPAIGN\n\nENTER / LEFT CLICK  START", parent=camera.ui, origin=(0, 0), y=.08, scale=.045, color=YELLOW, enabled=False)
+        self.menu = Text("", parent=camera.ui, origin=(0, 0), y=.02, z=-.1, scale=1, color=color.white, enabled=False)
         self.hud_bg = Entity(parent=camera.ui, model="quad", position=(0, .455), scale=(.98, .06), color=color.rgba32(8, 12, 24, 235), enabled=False)
         self.hud = Text("", parent=camera.ui, position=(-.46, .462), scale=.68, color=YELLOW, enabled=False)
         self.objective_bg = Entity(parent=camera.ui, model="quad", position=(-.33, .335), scale=(.48, .095), color=color.rgba32(8, 12, 24, 235), enabled=False)
         self.objective = Text("", parent=camera.ui, position=(-.55, .355), scale=.62, color=CYAN, enabled=False)
         self.help_bg = Entity(parent=camera.ui, model="quad", position=(0, -.46), scale=(1.08, .07), color=color.rgba32(8, 12, 24, 245), enabled=False)
         self.help = Text("W/S  DRIVE   A/D  STEER   TAB  LOCK TARGET   J  CLEANUP   E  EXIT   ESC  MENU", parent=camera.ui, position=(-.51, -.467), scale=.61, color=color.white, enabled=False)
-        self.notice_bg = Entity(parent=camera.ui, model="quad", position=(0, -.32), scale=(.62, .07), color=color.rgba32(8, 12, 24, 245), enabled=False)
-        self.notice = Text("", parent=camera.ui, origin=(0, 0), y=-.32, scale=.045, color=CYAN, enabled=False)
+        self.notice_bg = Entity(parent=camera.ui, model="quad", position=(0, -.43), scale=(.68, .055), color=color.rgba32(8, 12, 24, 220), enabled=False)
+        self.notice = Text("", parent=camera.ui, origin=(0, 0), y=-.43, z=-.1, scale=.9, color=color.white, enabled=False)
         self.fight_banner = Text("", parent=camera.ui, origin=(0, 0), y=.22, scale=.085, color=PINK, enabled=False)
         self.quest_panel = Entity(parent=camera.ui, model="quad", color=color.rgb32(18, 14, 32), scale=(.78, .58), enabled=False)
-        self.quest_text = Text("", parent=camera.ui, origin=(0, 0), y=.03, scale=.045, color=YELLOW, enabled=False)
+        self.quest_text = Text("", parent=camera.ui, origin=(0, 0), y=.03, z=-.1, scale=1, color=YELLOW, enabled=False)
         self.shop_panel = Entity(parent=camera.ui, model="quad", color=color.rgb32(18, 14, 32), scale=(.78, .58), enabled=False)
-        self.shop_text = Text("", parent=camera.ui, origin=(0, 0), y=.03, scale=.045, color=CYAN, enabled=False)
+        self.shop_text = Text("", parent=camera.ui, origin=(0, 0), y=.03, z=-.1, scale=1, color=CYAN, enabled=False)
         self.win_panel = Entity(parent=camera.ui, model="quad", color=color.rgba32(8, 6, 18, 250), scale=(.72, .62), enabled=False)
-        self.win_text = Text("", parent=camera.ui, origin=(0, 0), y=.04, scale=.055, color=YELLOW, enabled=False)
+        self.win_text = Text("", parent=camera.ui, origin=(0, 0), y=.04, z=-.1, scale=1, color=YELLOW, enabled=False)
 
     def add(self, entity):
         self.scene_entities.append(entity)
@@ -154,7 +168,7 @@ class HybridGame:
             self.lock_marker = None
         self.locked_enemy = target
         if target:
-            self.lock_marker = Entity(model="quad", position=target["entity"].position + Vec3(0, 2.1, 0), scale=1.25, color=color.rgba32(255, 55, 120, 220), billboard=True, double_sided=True)
+            self.lock_marker = Entity(model="quad", position=target["entity"].position + Vec3(0, 2.1, 0), scale=.22, rotation_z=45, color=PINK, shader=unlit_shader, billboard=True, double_sided=True)
 
     def nearest_enemy(self) -> dict | None:
         alive = [enemy for enemy in self.enemies if not enemy["dead"]]
@@ -163,8 +177,9 @@ class HybridGame:
     def damage_enemy(self, target: dict) -> None:
         """Apply one hit after a cleanup projectile reaches its target."""
         entity = target["entity"]
-        target["hp"] -= 1
-        self.notice.text = "PAN BONK!"
+        if target["dead"]:
+            return
+        target["hp"] -= 1 + self.weapon_level
         direction = entity.position - self.avatar.position
         direction.y = 0
         if direction.length():
@@ -180,7 +195,7 @@ class HybridGame:
             entity.animate_scale(0, duration=.2)
             self.coins += 5; self.xp += 10; self.save()
             if self.street == 2 and all(enemy["dead"] for enemy in self.enemies):
-                invoke(self.win_game, delay=.35)
+                self.win_game()
 
     def spawn_projectile(self, aim_point: Vec3) -> None:
         start = self.avatar.position + Vec3(0, 1.1, 0)
@@ -198,6 +213,8 @@ class HybridGame:
             projectile = shot["entity"]
             shot["life"] -= dt
             target = shot["target"]
+            if target and target["dead"]:
+                shot["target"] = target = None
             if target is None:
                 nearby = [enemy for enemy in self.enemies if not enemy["dead"] and distance(projectile, enemy["entity"]) < 2.0]
                 if nearby:
@@ -207,7 +224,7 @@ class HybridGame:
                 direction = target["entity"].position + Vec3(0, 1, 0) - projectile.position
                 if direction.length():
                     shot["velocity"] = direction.normalized() * 15
-                if distance(projectile, target["entity"].position + Vec3(0, 1, 0)) < .75:
+                if direction.length() <= .75 + shot["velocity"].length() * dt:
                     self.damage_enemy(target)
                     self.projectiles.remove(shot)
                     destroy(projectile)
@@ -283,14 +300,9 @@ class HybridGame:
             self.add(Entity(model=road("dumpster"), position=pos, scale=1.1))
         self.shop = self.add(Entity(model=city("building-type-b"), position=(5, 0, 10), scale=2.1, collider="box"))
         self.board = self.add(Entity(model=city("building-type-d"), position=(-5, 0, 10), scale=1.9, collider="box"))
-        for label, pos, tint, width in (("SHOP [E]", (5, 3.5, 10), CYAN, 2.8), ("QUEST BOARD [E]", (-5, 3.5, 10), YELLOW, 4.0)):
-            self.add(Entity(model="quad", position=pos, scale=(width, .7), color=color.rgba32(8, 12, 24, 230), billboard=True, double_sided=True))
-            self.add(Text(label, world_position=(pos[0], pos[1], pos[2] - .05), billboard=True, scale=.8, color=tint))
         if self.street == 2:
             school_pos = (17, 0, 9)
             self.add(Entity(model=city("building-type-r"), position=school_pos, scale=2.8, collider="box"))
-            self.add(Entity(model="quad", position=(17, 4.3, 9), scale=(4.6, .8), color=color.rgba32(8, 12, 24, 235), billboard=True, double_sided=True))
-            self.add(Text("ZSTI SCHOOL // FINAL CLEANUP", world_position=(17, 4.25, 8.95), billboard=True, scale=.72, color=YELLOW))
         self.car_entity = Entity(model=car("sedan"), position=(-7, .5, 0), scale=1.25, collider="box")
         self.add(self.car_entity)
         # The OBJ loader is compatible with this Ursina/glTF version; provide the
@@ -303,24 +315,58 @@ class HybridGame:
         for kind, pos, tint, model_name, hp in self.LEVELS[self.street]:
             enemy = Entity(model=skeleton(model_name), position=pos, rotation_x=0, scale=.65, color=tint)
             self.enemies.append({"entity": enemy, "kind": kind, "hp": hp, "dead": False, "tint": tint})
-        self.add(Text(f"UL. {self.LEVEL_NAMES[self.street]}", world_position=(-2, 4, -1), billboard=True, scale=1.0, color=YELLOW))
         camera.position = (-7, 19, -18); camera.look_at(self.car_entity.position)
 
     def start(self):
+        self.hide_ui()
         self.state = "PLAY"
         for item in (self.intro, self.map_panel, self.menu_card, self.menu, self.quest_panel, self.quest_text, self.shop_panel, self.shop_text, self.win_panel, self.win_text): item.enabled = False
         self.fight_banner.enabled = False
-        self.hud_bg.enabled = True; self.notice_bg.enabled = True
-        self.hud.enabled = True; self.notice.enabled = True
-        self.notice.text = "READY // PRESS E TO LEAVE THE CAR"
+        self.refresh_prompt()
+
+    def hide_ui(self):
+        for item in (self.intro, self.map_panel, self.menu_card, self.menu,
+                     self.hud_bg, self.hud, self.help_bg, self.help,
+                     self.objective_bg, self.objective, self.notice_bg, self.notice,
+                     self.fight_banner, self.quest_panel, self.quest_text,
+                     self.shop_panel, self.shop_text, self.win_panel, self.win_text):
+            item.enabled = False
+
+    def interaction(self) -> str:
+        actor = self.car_entity if self.in_car else self.avatar
+        if distance(actor, self.shop) < 4:
+            return "shop"
+        if distance(actor, self.board) < 4:
+            return "quest"
+        if self.in_car and self.car_entity.x > 20 and all(e["dead"] for e in self.enemies):
+            return "next"
+        if self.in_car:
+            return "exit"
+        if distance(actor, self.car_entity) < 2.5:
+            return "enter"
+        return ""
+
+    def refresh_prompt(self):
+        prompts = {"shop": "E  Shop", "quest": "E  Job board", "next": "E  Continue",
+                   "exit": "E  Leave car", "enter": "E  Enter car"}
+        message = prompts.get(self.interaction(), "")
+        if not message and all(e["dead"] for e in self.enemies):
+            message = "Return to the car and drive east"
+        self.notice.text = message
+        self.notice.enabled = self.notice_bg.enabled = bool(message)
 
     def show_menu(self):
+        self.hide_ui()
+        self.menu.text = (f"GREEN-EYE\n\nStage {self.street + 1}/3   Coins {self.coins}   XP {self.xp}"
+                          "\n\nEnter  Continue\nWASD  Walk\nS / W  Drive / Reverse\nA / D  Steer"
+                          "\nMouse + J / Click  Shoot\nTab  Target lock\nE  Interact")
         self.state = "MENU"
         self.intro.enabled = False; self.map_panel.enabled = True; self.menu_card.enabled = True; self.menu.enabled = True
         self.hud_bg.enabled = False; self.help_bg.enabled = False; self.notice_bg.enabled = False
         self.hud.enabled = False; self.help.enabled = False; self.notice.enabled = False; self.objective_bg.enabled = False; self.objective.enabled = False
 
     def win_game(self):
+        self.hide_ui()
         self.state = "WIN"
         self.hud_bg.enabled = False; self.help_bg.enabled = False; self.notice_bg.enabled = False
         self.hud.enabled = False; self.help.enabled = False; self.notice.enabled = False; self.objective_bg.enabled = False; self.objective.enabled = False
@@ -329,19 +375,24 @@ class HybridGame:
         self.win_text.text = "ZSTI CLEANUP COMPLETE!\n\nTHE CITY IS TIDY\n\nCOINS %d   XP %d\n\nENTER  PLAY AGAIN" % (self.coins, self.xp)
 
     def open_quest(self):
+        self.hide_ui()
         self.state = "QUEST"
         self.map_panel.enabled = False; self.menu_card.enabled = False; self.hud.enabled = False; self.help.enabled = False
         self.objective_bg.enabled = False; self.objective.enabled = False
         self.hud_bg.enabled = False; self.help_bg.enabled = False; self.notice_bg.enabled = False
         self.quest_panel.enabled = True; self.quest_text.enabled = True
-        self.quest_text.text = f"QUEST BOARD\n\nLEVEL {self.street + 1}/3: {self.LEVEL_NAMES[self.street]}\nREMOVE TARGETS\nREWARD 30 COINS + 50 XP\n\nENTER ACCEPT   E CLOSE"
+        remaining = sum(not e["dead"] for e in self.enemies)
+        self.quest_text.text = f"JOB BOARD\n\nClear the area: {remaining} remaining\n5 coins + 10 XP per target\n\nE / Esc  Close"
 
     def open_shop(self):
+        self.hide_ui()
         self.state = "SHOP"
         self.shop_panel.enabled = True; self.shop_text.enabled = True; self.hud_bg.enabled = False; self.help_bg.enabled = False; self.notice_bg.enabled = False; self.hud.enabled = False; self.help.enabled = False; self.objective_bg.enabled = False; self.objective.enabled = False
-        self.shop_text.text = f"NIGHT SHOP\n\nP  PAN UPGRADE  30 COINS\n\nCOINS {self.coins}\n\nE CLOSE"
+        offer = "Maximum upgrade reached" if self.weapon_level == 3 else "P  Upgrade damage - 30 coins"
+        self.shop_text.text = f"SHOP\n\nDamage: {1 + self.weapon_level}\nCoins: {self.coins}\n\n{offer}\n\nE / Esc  Close"
 
     def update(self, dt):
+        dt = max(0.0, min(dt, .05))
         if self.state == "INTRO":
             self.intro_time += dt
             if self.intro_time > 3.0: self.show_menu()
@@ -352,6 +403,8 @@ class HybridGame:
             self.fight_banner_time -= dt
             if self.fight_banner_time <= 0: self.fight_banner.enabled = False
         self.update_projectiles(dt)
+        if self.state != "PLAY":
+            return
         self.update_target_lock()
         if self.in_car:
             forward = held_keys["s"] - held_keys["w"]
@@ -381,11 +434,7 @@ class HybridGame:
             delta = actor.position - enemy["entity"].position
             delta.y = 0
             if delta.length() > 3 and delta.length() < 16: enemy["entity"].position += delta.normalized() * 1.2 * dt
-        mode = "DRIVING" if self.in_car else "ON FOOT"
-        self.hud.text = f"GLIWICE  |  L{self.street + 1}/3  |  {self.LEVEL_NAMES[self.street]}  |  COINS {self.coins}  |  XP {self.xp}  |  {mode}"
-        remaining = sum(not enemy["dead"] for enemy in self.enemies)
-        objective = "DEFEAT THE ZSTI BOSS" if self.street == 2 else "CLEAR THE STREET"
-        self.objective.text = f"OBJECTIVE\n{objective}  [{remaining} LEFT]"
+        self.refresh_prompt()
 
     def input(self, key):
         if self.state == "INTRO": self.show_menu()
@@ -414,7 +463,6 @@ class HybridGame:
                 if aim.length():
                     self.avatar.rotation_y = math.degrees(math.atan2(aim.x, aim.z))
                 self.spawn_projectile(aim_point)
-                self.notice.text = "CLEANUP SHOT // HOMING"
             elif key == "e" and distance(self.avatar if not self.in_car else self.car_entity, self.shop) < 4: self.open_shop()
             elif key == "e" and distance(self.avatar if not self.in_car else self.car_entity, self.board) < 4: self.open_quest()
             elif key == "e" and self.in_car and self.car_entity.x > 20 and all(e["dead"] for e in self.enemies):
@@ -426,22 +474,28 @@ class HybridGame:
                 self.in_car = False
                 self.avatar.position = self.car_entity.position + Vec3(1.4, -.5, 0)
                 self.avatar.enabled = True
-                self.fight_banner.text = "CLEANUP FIGHT!"
-                self.fight_banner.enabled = True; self.fight_banner_time = 1.2
                 self.notice.text = "ON FOOT // J CLEANUP PAN // E ENTER CAR"
             elif key == "e" and not self.in_car and distance(self.avatar, self.car_entity) < 2.5:
+                self.set_target_lock(None)
                 self.in_car = True
                 self.avatar.enabled = False
                 self.notice.text = "BACK IN CAR // DRIVE TO THE NEXT STREET"
         elif self.state == "QUEST":
             if key in ("e", "escape"): self.start()
-            elif key == "enter": self.quest_text.text = "QUEST ACTIVE\n\nREMOVE 3 TARGETS\n\nE CLOSE"; self.notice.text = "CLEANUP JOB ACCEPTED"
         elif self.state == "SHOP":
             if key in ("e", "escape"): self.start()
-            elif key == "p" and self.coins >= 30: self.coins -= 30; self.save(); self.open_shop()
+            elif key == "p":
+                if self.coins >= 30 and self.weapon_level < 3:
+                    self.coins -= 30
+                    self.weapon_level += 1
+                    self.save()
+                    self.open_shop()
+                elif self.coins < 30:
+                    self.open_shop()
+                    self.shop_text.text += "\nNot enough coins"
         elif self.state == "WIN":
             if key == "enter":
-                self.street = 0; self.coins = 0; self.xp = 0; self.save(); self.build_street(); self.start()
+                self.street = 0; self.build_street(); self.start()
             elif key == "escape": self.show_menu()
 
     def run(self): app.run()
