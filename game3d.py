@@ -214,8 +214,11 @@ class HybridGame:
             self.intro_actors.append({"entity": actor, "direction": vector, "phase": len(self.intro_actors) * .8})
         self.intro_hero = Entity(model=character("character-gamer"), texture=f"{CHARACTERS}/Textures/colormap.png",
                                  position=(-3, 0, -9), scale=2.35, color=color.white, enabled=False)
-        camera.position = (-24, 22, -25)
-        camera.look_at(Vec3(-8, 0, 0))
+        # Keep a fixed isometric angle; only the focus point moves during the pan.
+        intro_focus = Vec3(-8, 0, 0)
+        camera.position = intro_focus + Vec3(0, 24, -22)
+        camera.look_at(intro_focus)
+        camera.rotation_z = 0
 
     def finish_intro(self):
         for actor in self.intro_actors:
@@ -233,8 +236,9 @@ class HybridGame:
             entity.position += actor["direction"] * dt * (1.15 if entity.scale_y < 1 else .85)
             entity.y = abs(math.sin(self.intro_time * 5 + actor["phase"])) * .06
         progress = min(1.0, self.intro_time / 7.5)
-        camera.position = lerp(Vec3(-24, 22, -25), Vec3(18, 17, -19), progress)
-        camera.look_at(lerp(Vec3(-8, 0, 0), Vec3(5, 0, 0), progress))
+        focus = lerp(Vec3(-8, 0, 0), Vec3(5, 0, 0), progress)
+        camera.position = focus + Vec3(0, 24, -22)
+        camera.look_at(focus)
         camera.rotation_z = 0
         if self.intro_time < 2.3:
             self.intro.text = "GLIWICE WAS QUIET..."
