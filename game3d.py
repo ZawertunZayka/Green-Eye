@@ -58,9 +58,16 @@ class HybridGame:
         "ZSTI courtyard. The Principal of Disorder challenges the city's cleaner!",
     )
     LEVELS = (
-        (("bruiser", (11, 0, -5), PINK, "Warrior", 2), ("punk", (14, 0, 6), CYAN, "Rogue", 2)),
-        (("punk", (11, 0, -5), CYAN, "Rogue", 2), ("businessman", (-12, 0, -5), color.orange, "Mage", 2), ("bruiser", (14, 0, 6), PINK, "Warrior", 3)),
-        (("zsti_boss", (12, 0, 0), YELLOW, "Mage", 12),),
+        (("bruiser", (11, 0, -3), PINK, "Warrior", 2), ("punk", (16, 0, 3), CYAN, "Rogue", 2),
+         ("punk", (-12, 0, 3), CYAN, "Rogue", 2), ("businessman", (-19, 0, -3), color.orange, "Mage", 2),
+         ("bruiser", (3, 0, 13), PINK, "Warrior", 3), ("punk", (-3, 0, -14), CYAN, "Rogue", 2)),
+        (("punk", (10, 0, -3), CYAN, "Rogue", 2), ("businessman", (-11, 0, -3), color.orange, "Mage", 2),
+         ("bruiser", (17, 0, 3), PINK, "Warrior", 3), ("bruiser", (-19, 0, 3), PINK, "Warrior", 3),
+         ("punk", (3, 0, 14), CYAN, "Rogue", 2), ("businessman", (-3, 0, -14), color.orange, "Mage", 2),
+         ("punk", (3, 0, -12), CYAN, "Rogue", 2)),
+        (("zsti_boss", (13, 0, 0), YELLOW, "Mage", 12),
+         ("boss_guard", (6, 0, -6), PINK, "Warrior", 3), ("boss_guard", (6, 0, 6), CYAN, "Rogue", 3),
+         ("boss_guard", (16, 0, -6), color.orange, "Mage", 3), ("boss_guard", (16, 0, 6), PINK, "Warrior", 3)),
     )
     def __init__(self):
         self.state = "INTRO"
@@ -519,6 +526,10 @@ class HybridGame:
             ("building-type-f", (10, 9), 2.4), ("building-type-h", (18, 9), 2.2), ("building-type-j", (25, 9), 2.5),
             ("building-type-k", (-25, -9), 2.4), ("building-type-m", (-17, -9), 2.3), ("building-type-o", (-9, -9), 2.5),
             ("building-type-p", (10, -9), 2.3), ("building-type-r", (18, -9), 2.4), ("building-type-t", (25, -9), 2.2),
+            ("building-type-g", (-24, 18), 1.8), ("building-type-i", (-15, 18), 1.7),
+            ("building-type-l", (15, 18), 1.8), ("building-type-n", (24, 18), 1.7),
+            ("building-type-q", (-24, -18), 1.8), ("building-type-s", (-15, -18), 1.7),
+            ("building-type-u", (15, -18), 1.8), ("building-type-c", (24, -18), 1.7),
         ]
         for name, pos, size in houses:
             if self.street == 2 and pos == (18, 9):
@@ -527,7 +538,22 @@ class HybridGame:
         # Public-space details: planters, trees, flower beds, bins and lamps.
         for name, pos, size in (("tree-large", (-6, 0, 7), 1.5), ("tree-small", (7, 0, 7), 1.4), ("tree-large", (-7, 0, -7), 1.4), ("tree-small", (7, 0, -7), 1.4), ("planter", (5, 0, 7), 1.5), ("planter", (-5, 0, -7), 1.3)):
             self.add(Entity(model=city(name), position=pos, scale=size))
+        for name, pos, size in (
+            ("tree-small", (-21, 0, 14), 1.2), ("tree-large", (-11, 0, 14), 1.3),
+            ("tree-small", (11, 0, 14), 1.2), ("tree-large", (21, 0, 14), 1.3),
+            ("tree-large", (-21, 0, -14), 1.3), ("tree-small", (-11, 0, -14), 1.2),
+            ("tree-large", (11, 0, -14), 1.3), ("tree-small", (21, 0, -14), 1.2),
+            ("planter", (-13, 0, 6.8), 1.2), ("planter", (13, 0, -6.8), 1.2),
+        ):
+            self.add(Entity(model=city(name), position=pos, scale=size))
         for name, pos, size in (("grass_1", (-8, 0, 8), 2.8), ("grass_2", (-3, 0, 8), 2.8), ("bush_1", (8, 0, 8), 2.4), ("flowers_1", (12, 0, 8), 2.2), ("fern", (-12, 0, 8), 2.0), ("grass_1", (18, 0, 7), 2.6), ("flowers_2", (-18, 0, -7), 2.0), ("bush_2", (14, 0, -7), 2.3)):
+            self.add(Entity(model=nature(name), position=pos, scale=size))
+        for name, pos, size in (
+            ("oak_1", (-27, 0, 14), 1.5), ("birch_2", (27, 0, 14), 1.5),
+            ("oak_2", (-27, 0, -14), 1.5), ("birch_1", (27, 0, -14), 1.5),
+            ("bush_3", (-18, 0, 14), 1.8), ("flowers_1", (18, 0, 14), 1.8),
+            ("flowers_2", (-18, 0, -14), 1.8), ("bush_1", (18, 0, -14), 1.8),
+        ):
             self.add(Entity(model=nature(name), position=pos, scale=size))
         for pos, rotation in (((-13, .1, 5.2), 0), ((13, .1, 5.2), 0), ((-13, .1, -5.2), 180), ((13, .1, -5.2), 180)):
             self.add(Entity(model=road("light-square"), position=pos, rotation_y=rotation, scale=1.15))
@@ -544,7 +570,9 @@ class HybridGame:
                                      rotation_y=-25, color=CYAN, shader=unlit_shader, enabled=False))
             self.east_exit_markers.append(marker)
         self.spawn_player()
-        for name, pos, rotation in (("taxi", (-15, .45, 0), 0), ("police", (11, .45, 0), 0), ("van", (0, .45, 12), 90), ("delivery", (0, .45, -12), 90)):
+        for name, pos, rotation in (("taxi", (-15, .45, 0), 0), ("police", (11, .45, 0), 0),
+                                    ("van", (0, .45, 12), 90), ("delivery", (0, .45, -12), 90),
+                                    ("hatchback-sports", (-23, .45, 3), 0), ("suv", (22, .45, -3), 180)):
             self.traffic.append(Entity(model=car(name), position=pos, rotation_y=rotation, scale=1.2))
         self.spawn_enemies()
         camera.position = (-7, 19, -18); camera.look_at(self.car_entity.position)
