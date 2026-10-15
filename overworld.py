@@ -33,6 +33,11 @@ class OverworldState:
     def draw(self, surface: pygame.Surface) -> None:
         c = COLORS; surface.fill(c["teal"])
         pygame.draw.rect(surface, c["green"], (0, 24, WIDTH, HEIGHT-24))
+        tiles = ("0002", "0003", "0004", "0010")
+        for row, y in enumerate(range(24, HEIGHT, 16)):
+            for col, x in enumerate(range(0, WIDTH, 16)):
+                tile = load_image(f"urban/tiles/tile_{tiles[(row + col) % len(tiles)]}.png", (16, 16))
+                if tile: surface.blit(tile, (x, y))
         pygame.draw.rect(surface, c["shadow"], (0, 78, WIDTH, 20)); pygame.draw.rect(surface, c["shadow"], (137, 24, 20, HEIGHT-24))
         for x in range(0, WIDTH, 16): pygame.draw.line(surface, (80, 155, 123), (x, 78), (x+8, 98))
         # Supplied Kenney City Kit preview sprites add readable city landmarks.
