@@ -198,8 +198,21 @@ class HybridGame:
                               scale=(.24, .015), color=PINK, enabled=False)
         self.hp_text = Text("HP 100 / 100", parent=camera.ui, position=(-.465, .455), scale=.58,
                             color=color.white, enabled=False)
-        self.inventory_text = Text("", parent=camera.ui, position=(-.465, .375), scale=.48,
-                                   color=YELLOW, enabled=False)
+        # Minecraft-style quick bar: every owned weapon has a visible numbered slot.
+        self.hotbar = Entity(parent=camera.ui, model="quad", position=(0, -.365), scale=(.56, .165),
+                             color=color.rgba32(8, 12, 24, 235), enabled=False)
+        self.hotbar_info = Text("", parent=self.hotbar, origin=(0, 0), y=.58, z=-.1, scale=.62, color=YELLOW)
+        self.hotbar_slots: list[dict] = []
+        labels = ("PAN", "PIN", "SOUP")
+        for index, (x, weapon, label) in enumerate(zip((-.32, 0, .32), self.WEAPONS, labels)):
+            frame = Entity(parent=self.hotbar, model="quad", x=x, scale=(.27, .76), color=color.rgb32(65, 70, 85))
+            face = Button(parent=frame, model="quad", scale=(.84, .84), color=color.rgb32(20, 25, 38),
+                          highlight_color=color.rgb32(35, 65, 78), pressed_color=CYAN)
+            face.on_click = Func(self.equip_weapon, index)
+            Text(str(index + 1), parent=frame, x=-.35, y=.29, z=-.1, scale=.65, color=color.white)
+            icon = Text(label, parent=frame, origin=(0, 0), y=.04, z=-.1, scale=.64, color=weapon["color"])
+            state = Text("", parent=frame, origin=(0, 0), y=-.27, z=-.1, scale=.35, color=color.white)
+            self.hotbar_slots.append({"frame": frame, "face": face, "icon": icon, "state": state, "weapon": weapon})
         self.minimap = Entity(parent=camera.ui, model="quad", position=(.405, .33), scale=(.19, .24),
                               color=color.rgba32(8, 12, 24, 225), enabled=False)
         Entity(parent=self.minimap, model="quad", scale=(.94, .17), color=color.rgb32(62, 66, 78), z=-.02)
@@ -344,12 +357,17 @@ class HybridGame:
         return next(weapon for weapon in self.WEAPONS if weapon["id"] == self.equipped_weapon)
 
     def refresh_inventory(self):
-        slots = []
-        for index, weapon in enumerate(self.WEAPONS, start=1):
-            label = weapon["name"] if weapon["id"] in self.unlocked_weapons else "LOCKED"
-            prefix = ">" if weapon["id"] == self.equipped_weapon else " "
-            slots.append(f"{prefix}{index} {label}")
-        self.inventory_text.text = "\n".join(slots)
+        active = self.weapon()
+        self.hotbar_info.text = f"{active['name']}  //  DMG {active['damage'] + self.weapon_level + self.damage_bonus}"
+        for slot in self.hotbar_slots:
+            weapon = slot["weapon"]
+            owned = weapon["id"] in self.unlocked_weapons
+            selected = weapon["id"] == self.equipped_weapon
+            slot["frame"].color = YELLOW if selected else color.rgb32(65, 70, 85)
+            slot["face"].color = color.rgb32(20, 25, 38) if owned else color.rgb32(12, 14, 22)
+            slot["icon"].color = weapon["color"] if owned else color.rgb32(80, 80, 90)
+            slot["state"].text = "SELECTED" if selected else ("READY" if owned else "LOCKED")
+            slot["state"].color = YELLOW if selected else (color.white if owned else color.rgb32(135, 135, 145))
 
     def equip_weapon(self, index):
         if not 0 <= index < len(self.WEAPONS):
@@ -718,7 +736,7 @@ class HybridGame:
         for item in (self.intro, self.map_panel, self.menu_card, self.menu, self.quest_panel, self.quest_text, self.shop_panel, self.shop_text, self.win_panel, self.win_text): item.enabled = False
         self.fight_banner.enabled = False
         self.hp_bg.enabled = self.hp_fill.enabled = self.hp_text.enabled = True
-        self.inventory_text.enabled = True
+        self.hotbar.enabled = True
         self.minimap.enabled = True
         self.refresh_player_hud()
         self.refresh_inventory()
@@ -734,7 +752,7 @@ class HybridGame:
                      self.hud_bg, self.hud, self.help_bg, self.help,
                      self.objective_bg, self.objective, self.notice_bg, self.notice,
                      self.story_bg, self.story_text, self.boss_bar_bg, self.boss_bar_fill, self.boss_name,
-                     self.hp_bg, self.hp_fill, self.hp_text, self.inventory_text, self.minimap,
+                     self.hp_bg, self.hp_fill, self.hp_text, self.hotbar, self.minimap,
                      self.upgrade_overlay, self.upgrade_title, *self.upgrade_cards,
                      self.fight_banner, self.quest_panel, self.quest_text,
                      self.shop_panel, self.shop_text, self.win_panel, self.win_text):
