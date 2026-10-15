@@ -305,12 +305,8 @@ class HybridGame:
         for kind, pos, tint, model_name, hp in self.LEVELS[self.street]:
             scale = 1.05 if kind == "zsti_boss" else .65
             enemy = Entity(model=skeleton(model_name), position=pos, rotation_x=0, scale=scale, color=tint)
-            aura = self.add(Entity(model="circle", position=(pos[0], .035, pos[2]), rotation_x=90,
-                                   scale=1.35 if kind != "zsti_boss" else 2.1,
-                                   color=color.rgba32(int(tint.r * 255), int(tint.g * 255), int(tint.b * 255), 70),
-                                   shader=unlit_shader))
             self.enemies.append({"entity": enemy, "kind": kind, "hp": hp, "max_hp": hp, "dead": False,
-                                 "tint": tint, "aura": aura, "shot_timer": random.uniform(2.0, 4.0)})
+                                 "tint": tint, "shot_timer": random.uniform(2.0, 4.0)})
 
     def build_intro(self):
         """Stage a short undead invasion over the already-built city."""
@@ -561,8 +557,6 @@ class HybridGame:
             target["dead"] = True
             entity.animate_rotation_z(180, duration=.18)
             entity.animate_scale(0, duration=.2)
-            if target.get("aura"):
-                target["aura"].animate_scale(0, duration=.2)
             self.coins += 5; self.xp += 10; self.save()
             level_cleared = all(enemy["dead"] for enemy in self.enemies)
             if level_cleared:
@@ -734,11 +728,6 @@ class HybridGame:
             if enemy["dead"]:
                 continue
             enemy["entity"].y = abs(math.sin(self.animation_time * 4.0 + index)) * .035
-            aura = enemy.get("aura")
-            if aura:
-                pulse = 1.0 + math.sin(self.animation_time * 5.0 + index) * .10
-                aura.scale = (1.35 if enemy["kind"] != "zsti_boss" else 2.1) * pulse
-                aura.position = Vec3(enemy["entity"].x, .035, enemy["entity"].z)
         for index, vehicle in enumerate([self.car_entity, *self.traffic]):
             if vehicle and vehicle.enabled:
                 vehicle.y = (.5 if vehicle is self.car_entity else .45) + math.sin(self.animation_time * 2.0 + index) * .008
