@@ -61,7 +61,7 @@ class HybridGame:
         for entity in self.scene_entities + self.traffic:
             destroy(entity)
         self.scene_entities.clear(); self.traffic.clear()
-        self.add(Entity(model="plane", scale=(70, 1, 55), color=color.rgb(37, 52, 42)))
+        self.add(Entity(model="cube", position=(0, -.35, 0), scale=(70, .5, 55), color=color.rgb(37, 52, 42)))
         # Real road GLBs, not flat Python rectangles.
         for x in range(-24, 25, 4): self.add(Entity(model=road("road-straight"), position=(x, .03, 0), scale=2.2))
         for z in range(-20, 21, 4): self.add(Entity(model=road("road-straight"), position=(0, .04, z), rotation_y=90, scale=2.2))
@@ -121,7 +121,10 @@ def input(key):
 def create_app():
     global app, game
     app = Ursina(borderless=False, development_mode=False)
-    window.title = "Green-Eye // Gliwice 3D Streets"; window.color = NIGHT
+    window.title = "Green-Eye // Gliwice 3D Streets"; window.color = NIGHT; scene.fog_color = NIGHT
+    Sky(color=color.rgb(16, 20, 35))
+    AmbientLight(color=color.rgba(190, 190, 190, 1))
+    DirectionalLight(rotation=(45, -45, 45), color=color.rgba(220, 220, 220, 1))
     game = HybridGame(); game.run()
 
 

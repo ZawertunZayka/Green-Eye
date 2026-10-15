@@ -1,4 +1,4 @@
-from game3d import create_app
+from game3d import create_app, update, input
 
 
 if __name__ == "__main__":
