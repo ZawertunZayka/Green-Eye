@@ -33,4 +33,11 @@ is by dglopez; its included LICENSE.txt permits use in personal and commercial
 projects. Its GLB grass, bush, flowers and fern models are used around the park
 area in the 3D street scene.
 
+The supplied KayKit Prototype Bits 1.1 FREE pack from
+`/home/zawe/Загрузки/KayKit_Prototype_Bits_1.1_FREE.zip` is CC0 by Kay Lousberg
+(www.kaylousberg.com). The selected Dummy_Base model and texture are preserved
+in assets/user/3d_kaykit/ for character/prototype use. The current Ursina OBJ
+loader does not successfully import this particular model, so the playable
+street keeps the already verified Mini Arcade character models as fallback.
+
 If external assets are added later, record their name, author, source URL, and license here. Only CC0 or CC-BY assets are acceptable.

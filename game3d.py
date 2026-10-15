@@ -16,10 +16,10 @@ GRASS_TEXTURE = "assets/user/urban/tiles/tile_0002.png"
 ROAD_TEXTURE = "assets/user/3d_city/Models/Roads/Previews/road-straight.png"
 MAP = "assets/user/city/gliwice_map.png"
 WALK = "assets/user/walk"
-NIGHT = color.rgb(10, 12, 24)
-CYAN = color.rgb(0, 225, 220)
-PINK = color.rgb(255, 35, 120)
-YELLOW = color.rgb(255, 225, 80)
+NIGHT = color.rgb32(10, 12, 24)
+CYAN = color.rgb32(0, 225, 220)
+PINK = color.rgb32(255, 35, 120)
+YELLOW = color.rgb32(255, 225, 80)
 
 
 def city(name):
@@ -71,19 +71,19 @@ class HybridGame:
 
     def create_ui(self):
         self.intro = Text("GREEN-EYE\n\nA GLIWICE CLEANUP STORY\n\nThe city needs a very cheerful cleaner.", parent=camera.ui, origin=(0, 0), y=.06, scale=.055, color=YELLOW)
-        self.map_panel = Entity(parent=camera.ui, model="quad", texture=MAP, scale=(1.72, 1), color=color.rgba(255, 255, 255, 180), enabled=False)
-        self.menu_card = Entity(parent=camera.ui, model="quad", color=color.rgba(8, 6, 18, 220), scale=(.62, .78), enabled=False)
+        self.map_panel = Entity(parent=camera.ui, model="quad", texture=MAP, scale=(1.72, 1), color=color.rgba32(255, 255, 255, 180), enabled=False)
+        self.menu_card = Entity(parent=camera.ui, model="quad", color=color.rgba32(8, 6, 18, 220), scale=(.62, .78), enabled=False)
         self.menu = Text("GLIWICE // RYNEK\n\nCLEANUP PROGRESS\n\nENTER  START STREET", parent=camera.ui, origin=(0, 0), y=.08, scale=.045, color=YELLOW, enabled=False)
-        self.hud_bg = Entity(parent=camera.ui, model="quad", position=(0, .455), scale=(.98, .105), color=color.rgba(8, 12, 24, 235), enabled=False)
+        self.hud_bg = Entity(parent=camera.ui, model="quad", position=(0, .455), scale=(.98, .105), color=color.rgba32(8, 12, 24, 235), enabled=False)
         self.hud = Text("", parent=camera.ui, position=(-.46, .465), scale=.82, color=YELLOW, enabled=False)
-        self.help_bg = Entity(parent=camera.ui, model="quad", position=(0, -.455), scale=(1.08, .105), color=color.rgba(8, 12, 24, 235), enabled=False)
+        self.help_bg = Entity(parent=camera.ui, model="quad", position=(0, -.455), scale=(1.08, .105), color=color.rgba32(8, 12, 24, 235), enabled=False)
         self.help = Text("WASD  DRIVE / WALK     E  EXIT / ENTER / USE     J  CLEANUP HIT     ESC  MAP", parent=camera.ui, position=(-.51, -.465), scale=.68, color=color.white, enabled=False)
-        self.notice_bg = Entity(parent=camera.ui, model="quad", position=(0, -.32), scale=(.7, .1), color=color.rgba(8, 12, 24, 235), enabled=False)
+        self.notice_bg = Entity(parent=camera.ui, model="quad", position=(0, -.32), scale=(.7, .1), color=color.rgba32(8, 12, 24, 235), enabled=False)
         self.notice = Text("", parent=camera.ui, origin=(0, 0), y=-.32, scale=.045, color=CYAN, enabled=False)
         self.fight_banner = Text("", parent=camera.ui, origin=(0, 0), y=.22, scale=.085, color=PINK, enabled=False)
-        self.quest_panel = Entity(parent=camera.ui, model="quad", color=color.rgb(18, 14, 32), scale=(.78, .58), enabled=False)
+        self.quest_panel = Entity(parent=camera.ui, model="quad", color=color.rgb32(18, 14, 32), scale=(.78, .58), enabled=False)
         self.quest_text = Text("", parent=camera.ui, origin=(0, 0), y=.03, scale=.045, color=YELLOW, enabled=False)
-        self.shop_panel = Entity(parent=camera.ui, model="quad", color=color.rgb(18, 14, 32), scale=(.78, .58), enabled=False)
+        self.shop_panel = Entity(parent=camera.ui, model="quad", color=color.rgb32(18, 14, 32), scale=(.78, .58), enabled=False)
         self.shop_text = Text("", parent=camera.ui, origin=(0, 0), y=.03, scale=.045, color=CYAN, enabled=False)
 
     def add(self, entity):
@@ -102,14 +102,14 @@ class HybridGame:
         # Thin horizontal cubes are used instead of planes: in Ursina this makes
         # the XZ orientation explicit, so the green field always fills the map.
         self.add(Entity(model="cube", position=(0, -.30, 0), scale=(120, .6, 120), texture=GRASS_TEXTURE, texture_scale=(80, 80), shader=unlit_shader, color=color.white))
-        self.add(Entity(model="cube", position=(0, -.005, 0), scale=(66, .08, 8.2), texture="white_cube", shader=unlit_shader, color=color.rgb(48, 51, 61)))
-        self.add(Entity(model="cube", position=(0, 0, 0), scale=(8.2, .08, 52), texture="white_cube", shader=unlit_shader, color=color.rgb(48, 51, 61)))
+        self.add(Entity(model="cube", position=(0, -.005, 0), scale=(66, .08, 8.2), texture="white_cube", shader=unlit_shader, color=color.rgb32(48, 51, 61)))
+        self.add(Entity(model="cube", position=(0, 0, 0), scale=(8.2, .08, 52), texture="white_cube", shader=unlit_shader, color=color.rgb32(48, 51, 61)))
         # Real road GLBs, not flat Python rectangles.
         for x in range(-24, 25, 4): self.add(Entity(model=road("road-straight"), position=(x, .03, 0), scale=2.2))
         for z in range(-20, 21, 4): self.add(Entity(model=road("road-straight"), position=(0, .04, z), rotation_y=90, scale=2.2))
         self.add(Entity(model=road("road-crossroad"), position=(0, .06, 0), scale=2.3))
         # Long, unbroken lane/curb lines instead of isolated decorative dashes.
-        line = color.rgb(238, 209, 92)
+        line = color.rgb32(238, 209, 92)
         for z in (-3.7, 3.7): self.add(Entity(model="cube", position=(0, .16, z), scale=(64, .035, .09), color=line, shader=unlit_shader))
         for x in (-3.7, 3.7): self.add(Entity(model="cube", position=(x, .17, 0), scale=(.09, .035, 50), color=line, shader=unlit_shader))
         houses = [("building-type-a", (-16, 5), 2.4), ("building-type-c", (-9, 5), 2.3), ("building-type-f", (9, 5), 2.4), ("building-type-h", (16, 5), 2.2), ("building-type-k", (-15, -8), 2.4), ("building-type-m", (9, -8), 2.3), ("building-type-r", (16, -8), 2.3)]
@@ -121,7 +121,7 @@ class HybridGame:
         self.shop = self.add(Entity(model=city("building-type-b"), position=(5, 0, 10), scale=2.1, collider="box"))
         self.board = self.add(Entity(model=city("building-type-d"), position=(-5, 0, 10), scale=1.9, collider="box"))
         for label, pos, tint, width in (("SHOP [E]", (5, 3.5, 10), CYAN, 2.8), ("QUEST BOARD [E]", (-5, 3.5, 10), YELLOW, 4.0)):
-            self.add(Entity(model="quad", position=pos, scale=(width, .7), color=color.rgba(8, 12, 24, 230), billboard=True, double_sided=True))
+            self.add(Entity(model="quad", position=pos, scale=(width, .7), color=color.rgba32(8, 12, 24, 230), billboard=True, double_sided=True))
             self.add(Text(label, world_position=(pos[0], pos[1], pos[2] - .05), billboard=True, scale=.8, color=tint))
         self.car_entity = Entity(model=car("sedan"), position=(-7, .5, 0), scale=1.25, collider="box")
         self.add(self.car_entity)
@@ -260,9 +260,9 @@ def input(key):
 def create_app():
     global app, game
     app = Ursina(borderless=False, development_mode=False)
-    window.title = "Green-Eye // Gliwice 3D Streets"; window.color = color.rgb(28, 72, 38); scene.fog_color = color.rgb(28, 72, 38)
-    AmbientLight(color=color.rgba(55, 55, 55, 1))
-    DirectionalLight(rotation=(45, -45, 45), color=color.rgba(85, 85, 85, 1))
+    window.title = "Green-Eye // Gliwice 3D Streets"; window.color = color.rgb32(28, 72, 38); scene.fog_color = color.rgb32(28, 72, 38)
+    AmbientLight(color=color.rgb32(55, 55, 55))
+    DirectionalLight(rotation=(45, -45, 45), color=color.rgb32(85, 85, 85))
     game = HybridGame(); game.run()
 
 
