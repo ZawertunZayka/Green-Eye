@@ -13,7 +13,7 @@ SAVE = ROOT / "save.json"
 CITY = "assets/user/3d_city/Models/GLB"
 CARS = "assets/user/3d_city/Models/Cars/GLB"
 ROADS = "assets/user/3d_city/Models/Roads/GLB"
-CHARACTERS = "assets/user/3d_arcade/Models/OBJ format"
+CHARACTERS = "assets/user/3d_arcade/Models/GLB format"
 NATURE = "assets/user/3d_nature/FULL_VERSION_ALL_MODELS/GLB"
 SKELETONS = "assets/user/3d_skeletons/KayKit_Skeletons_1.1_FREE/characters/gltf"
 MAP = "assets/user/city/gliwice_map.png"
@@ -37,7 +37,7 @@ def road(name):
 
 
 def character(name):
-    return f"{CHARACTERS}/{name}.obj"
+    return f"{CHARACTERS}/{name}.glb"
 
 
 def nature(name):
@@ -176,9 +176,7 @@ class HybridGame:
             self.add(Text("ZSTI SCHOOL // FINAL CLEANUP", world_position=(17, 4.25, 8.95), billboard=True, scale=.72, color=YELLOW))
         self.car_entity = Entity(model=car("sedan"), position=(-7, .5, 0), scale=1.25, collider="box")
         self.add(self.car_entity)
-        # The supplied packs contain city/vehicle models, but no humanoid GLBs.
-        # Keep the character fully 3D with a small primitive body until a character
-        # pack is added; the gameplay interface does not depend on the model.
+        # Use Kenney's GLB character so its bundled colormap is resolved reliably.
         self.avatar = self.add(Entity(model=character("character-gamer"), position=(-5.5, 0, 0), scale=2.25))
         self.avatar.enabled = True
         self.in_car = True
