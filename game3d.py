@@ -64,6 +64,7 @@ class HybridGame:
         self.weapon_level = 0
         self.coins, self.xp = self.load_progress()
         self.scene_entities: list[Entity] = []
+        self.building_bounds: list[tuple[float, float, float, float]] = []
         self.traffic: list[Entity] = []
         self.enemies: list[dict] = []
         self.attack_effects: list[Entity] = []
@@ -125,6 +126,32 @@ class HybridGame:
         self.scene_entities.append(entity)
         return entity
 
+    def add_building(self, name, position, scale):
+        entity = self.add(Entity(model=city(name), position=position, scale=scale, collider="box"))
+        low, high = entity.get_tight_bounds(scene)
+        self.building_bounds.append((low.x, high.x, low.z, high.z))
+        return entity
+
+    def blocked(self, position, radius):
+        if abs(position.x) > 28 - radius or abs(position.z) > 22 - radius:
+            return True
+        for left, right, bottom, top in self.building_bounds:
+            x = clamp(position.x, left, right)
+            z = clamp(position.z, bottom, top)
+            if (position.x - x) ** 2 + (position.z - z) ** 2 < radius ** 2:
+                return True
+        return False
+
+    def move_actor(self, actor, movement, radius):
+        # Small axis-separated steps prevent tunnelling and allow wall sliding.
+        steps = max(1, math.ceil(movement.length() / .15))
+        step = movement / steps
+        for _ in range(steps):
+            for offset in (Vec3(step.x, 0, 0), Vec3(0, 0, step.z)):
+                candidate = actor.position + offset
+                if not self.blocked(candidate, radius):
+                    actor.position = candidate
+
     def get_mouse_aim_point(self) -> Vec3:
         """Return the cursor's point on the street plane."""
         if mouse.collision and mouse.collision.world_point:
@@ -183,7 +210,7 @@ class HybridGame:
         direction = entity.position - self.avatar.position
         direction.y = 0
         if direction.length():
-            entity.animate_position(entity.position + direction.normalized() * 1.3, duration=.12)
+            self.move_actor(entity, direction.normalized() * 1.3, .4)
         entity.animate_color(color.white, duration=.05)
         invoke(entity.animate_color, target["tint"], delay=.10, duration=.12)
         flash = Entity(model="quad", position=entity.position + Vec3(0, 1, 0), scale=.9, color=color.rgba32(255, 246, 120, 230), billboard=True, double_sided=True)
@@ -253,6 +280,7 @@ class HybridGame:
         for enemy in self.enemies:
             destroy(enemy["entity"])
         self.scene_entities.clear(); self.traffic.clear()
+        self.building_bounds.clear()
         self.enemies.clear()
         # Continuous grass base and asphalt underlays keep the city readable even
         # where individual road-kit meshes have small tile gaps.
@@ -262,21 +290,19 @@ class HybridGame:
         self.add(Entity(model="cube", position=(0, -.08, 0), scale=(120, .04, 120), collider="box", visible=False))
         self.add(Entity(model="cube", position=(0, -.005, 0), scale=(66, .08, 8.2), texture="white_cube", shader=unlit_shader, color=color.rgb32(48, 51, 61)))
         self.add(Entity(model="cube", position=(0, 0, 0), scale=(8.2, .08, 52), texture="white_cube", shader=unlit_shader, color=color.rgb32(48, 51, 61)))
-        # Real road GLBs, not flat Python rectangles.
-        for x in range(-24, 25, 4): self.add(Entity(model=road("road-straight"), position=(x, .03, 0), scale=2.2))
-        for z in range(-20, 21, 4): self.add(Entity(model=road("road-straight"), position=(0, .04, z), rotation_y=90, scale=2.2))
-        self.add(Entity(model=road("road-crossroad"), position=(0, .06, 0), scale=2.3))
-        # Long, unbroken lane/curb lines instead of isolated decorative dashes.
-        line = color.rgb32(238, 209, 92)
-        for z in (-3.7, 3.7): self.add(Entity(model="cube", position=(0, .16, z), scale=(64, .035, .09), color=line, shader=unlit_shader))
-        for x in (-3.7, 3.7): self.add(Entity(model="cube", position=(x, .17, 0), scale=(.09, .035, 50), color=line, shader=unlit_shader))
-        # Sidewalk ribbons make the road network read as connected city streets.
+        # Continuous asphalt, with lane markings stopping before the junction.
+        line = color.rgb32(225, 221, 200)
+        for x in range(-30, 31, 4):
+            if abs(x) > 6:
+                self.add(Entity(model="cube", position=(x, .06, 0), scale=(1.8, .02, .10), color=line, shader=unlit_shader))
+        for z in range(-22, 23, 4):
+            if abs(z) > 6:
+                self.add(Entity(model="cube", position=(0, .07, z), scale=(.10, .02, 1.8), color=line, shader=unlit_shader))
         sidewalk = color.rgb32(145, 150, 162)
-        for z in (-5.2, 5.2): self.add(Entity(model="cube", position=(0, .12, z), scale=(66, .08, 1.5), texture="white_cube", shader=unlit_shader, color=sidewalk))
-        for x in (-5.2, 5.2): self.add(Entity(model="cube", position=(x, .13, 0), scale=(1.5, .08, 52), texture="white_cube", shader=unlit_shader, color=sidewalk))
-        for x in range(-24, 25, 8):
-            self.add(Entity(model=city("path-long"), position=(x, .17, 5.15), rotation_y=90, scale=1.2))
-            self.add(Entity(model=city("path-long"), position=(x, .17, -5.15), rotation_y=90, scale=1.2))
+        for side in (-1, 1):
+            for bank in (-1, 1):
+                self.add(Entity(model="cube", position=(side * 18.55, .10, bank * 4.85), scale=(28.9, .12, 1.5), color=sidewalk, shader=unlit_shader))
+                self.add(Entity(model="cube", position=(bank * 4.85, .10, side * 16), scale=(1.5, .12, 20.8), color=sidewalk, shader=unlit_shader))
         # Dense but readable residential blocks around the playable roads.
         houses = [
             ("building-type-a", (-25, 9), 2.5), ("building-type-c", (-18, 9), 2.2), ("building-type-e", (-10, 9), 2.4),
@@ -284,7 +310,10 @@ class HybridGame:
             ("building-type-k", (-25, -9), 2.4), ("building-type-m", (-17, -9), 2.3), ("building-type-o", (-9, -9), 2.5),
             ("building-type-p", (10, -9), 2.3), ("building-type-r", (18, -9), 2.4), ("building-type-t", (25, -9), 2.2),
         ]
-        for name, pos, size in houses: self.add(Entity(model=city(name), position=(pos[0], 0, pos[1]), scale=size, collider="box"))
+        for name, pos, size in houses:
+            if self.street == 2 and pos == (18, 9):
+                continue
+            self.add_building(name, (pos[0], 0, pos[1]), size)
         # Public-space details: planters, trees, flower beds, bins and lamps.
         for name, pos, size in (("tree-large", (-6, 0, 7), 1.5), ("tree-small", (7, 0, 7), 1.4), ("tree-large", (-7, 0, -7), 1.4), ("tree-small", (7, 0, -7), 1.4), ("planter", (5, 0, 7), 1.5), ("planter", (-5, 0, -7), 1.3)):
             self.add(Entity(model=city(name), position=pos, scale=size))
@@ -294,15 +323,15 @@ class HybridGame:
             self.add(Entity(model=road("light-square"), position=pos, rotation_y=rotation, scale=1.15))
         for pos, rotation in (((-5.2, .1, 8), 90), ((5.2, .1, -8), -90)):
             self.add(Entity(model=road("traffic-light"), position=pos, rotation_y=rotation, scale=1.2))
-        for pos in ((-20, .1, 5.3), (20, .1, -5.3), (0, .1, 9.5)):
+        for pos in ((-20, .1, 5.3), (20, .1, -5.3)):
             self.add(Entity(model=road("road-sign-street"), position=pos, scale=1.2))
         for pos in ((-20, .1, 7), (20, .1, -7)):
             self.add(Entity(model=road("dumpster"), position=pos, scale=1.1))
-        self.shop = self.add(Entity(model=city("building-type-b"), position=(5, 0, 10), scale=2.1, collider="box"))
-        self.board = self.add(Entity(model=city("building-type-d"), position=(-5, 0, 10), scale=1.9, collider="box"))
+        self.shop = self.add_building("building-type-b", (8, 0, 17), 2.1)
+        self.board = self.add_building("building-type-d", (-8, 0, 17), 1.9)
         if self.street == 2:
             school_pos = (17, 0, 9)
-            self.add(Entity(model=city("building-type-r"), position=school_pos, scale=2.8, collider="box"))
+            self.add_building("building-type-r", school_pos, 2.8)
         self.car_entity = Entity(model=car("sedan"), position=(-7, .5, 0), scale=1.25, collider="box")
         self.add(self.car_entity)
         # The OBJ loader is compatible with this Ursina/glTF version; provide the
@@ -409,7 +438,7 @@ class HybridGame:
         if self.in_car:
             forward = held_keys["s"] - held_keys["w"]
             steer = held_keys["d"] - held_keys["a"]
-            if forward: self.car_entity.position += self.car_entity.forward * forward * 8 * dt
+            if forward: self.move_actor(self.car_entity, self.car_entity.forward * forward * 8 * dt, 1.9)
             self.car_entity.rotation_y += steer * 100 * dt
             self.car_entity.x = clamp(self.car_entity.x, -28, 28); self.car_entity.z = clamp(self.car_entity.z, -22, 22)
             actor = self.car_entity
@@ -418,7 +447,7 @@ class HybridGame:
             actor = self.avatar
             direction = Vec3(held_keys["d"] - held_keys["a"], 0, held_keys["w"] - held_keys["s"])
             if direction.length() and actor:
-                actor.position += direction.normalized() * 4.5 * dt
+                self.move_actor(actor, direction.normalized() * 4.5 * dt, .45)
                 actor.x = clamp(actor.x, -28, 28); actor.z = clamp(actor.z, -22, 22)
                 # While walking, face the direction of travel.
                 actor.rotation_y = math.degrees(math.atan2(direction.x, direction.z))
@@ -433,7 +462,7 @@ class HybridGame:
             if enemy["dead"]: continue
             delta = actor.position - enemy["entity"].position
             delta.y = 0
-            if delta.length() > 3 and delta.length() < 16: enemy["entity"].position += delta.normalized() * 1.2 * dt
+            if delta.length() > 3 and delta.length() < 16: self.move_actor(enemy["entity"], delta.normalized() * 1.2 * dt, .4)
         self.refresh_prompt()
 
     def input(self, key):
@@ -471,8 +500,18 @@ class HybridGame:
                 else:
                     self.win_game()
             elif key == "e" and self.in_car:
+                exit_position = None
+                for offset in (self.car_entity.right, -self.car_entity.right,
+                               self.car_entity.forward, -self.car_entity.forward):
+                    candidate = self.car_entity.position + offset.normalized() * 2.2
+                    candidate.y = 0
+                    if not self.blocked(candidate, .45):
+                        exit_position = candidate
+                        break
+                if exit_position is None:
+                    return
                 self.in_car = False
-                self.avatar.position = self.car_entity.position + Vec3(1.4, -.5, 0)
+                self.avatar.position = exit_position
                 self.avatar.enabled = True
                 self.notice.text = "ON FOOT // J CLEANUP PAN // E ENTER CAR"
             elif key == "e" and not self.in_car and distance(self.avatar, self.car_entity) < 2.5:
