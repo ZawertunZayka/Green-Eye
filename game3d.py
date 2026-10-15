@@ -66,6 +66,7 @@ class HybridGame:
         self.traffic: list[Entity] = []
         self.enemies: list[dict] = []
         self.attack_effects: list[Entity] = []
+        self.projectiles: list[dict] = []
         self.avatar: Entity | None = None
         self.in_car = True
         self.attack_cooldown = 0.0
@@ -145,12 +146,71 @@ class HybridGame:
             self.attack_effects.remove(effect)
         destroy(effect)
 
+    def damage_enemy(self, target: dict) -> None:
+        """Apply one hit after a cleanup projectile reaches its target."""
+        entity = target["entity"]
+        target["hp"] -= 1
+        self.notice.text = "PAN BONK!"
+        direction = entity.position - self.avatar.position
+        direction.y = 0
+        if direction.length():
+            entity.animate_position(entity.position + direction.normalized() * 1.3, duration=.12)
+        entity.animate_color(color.white, duration=.05)
+        invoke(entity.animate_color, target["tint"], delay=.10, duration=.12)
+        flash = Entity(model="quad", position=entity.position + Vec3(0, 1, 0), scale=.9, color=color.rgba32(255, 246, 120, 230), billboard=True, double_sided=True)
+        self.attack_effects.append(flash)
+        invoke(self.remove_attack_effect, flash, delay=.12)
+        if target["hp"] <= 0:
+            target["dead"] = True
+            entity.animate_rotation_z(180, duration=.18)
+            entity.animate_scale(0, duration=.2)
+            self.coins += 5; self.xp += 10; self.save()
+            if self.street == 2 and all(enemy["dead"] for enemy in self.enemies):
+                invoke(self.win_game, delay=.35)
+
+    def spawn_projectile(self, aim_point: Vec3) -> None:
+        start = self.avatar.position + Vec3(0, 1.1, 0)
+        direction = aim_point - start
+        direction.y = 0
+        if not direction.length():
+            direction = self.avatar.forward
+        direction = direction.normalized()
+        shot = Entity(model="sphere", position=start, scale=.22, color=YELLOW, shader=unlit_shader)
+        self.projectiles.append({"entity": shot, "velocity": direction * 15, "target": None, "life": 1.0})
+
+    def update_projectiles(self, dt: float) -> None:
+        for shot in self.projectiles[:]:
+            projectile = shot["entity"]
+            shot["life"] -= dt
+            target = shot["target"]
+            if target is None:
+                nearby = [enemy for enemy in self.enemies if not enemy["dead"] and distance(projectile, enemy["entity"]) < 2.0]
+                if nearby:
+                    shot["target"] = min(nearby, key=lambda enemy: distance(projectile, enemy["entity"]))
+                    target = shot["target"]
+            if target and not target["dead"]:
+                direction = target["entity"].position + Vec3(0, 1, 0) - projectile.position
+                if direction.length():
+                    shot["velocity"] = direction.normalized() * 15
+                if distance(projectile, target["entity"].position + Vec3(0, 1, 0)) < .75:
+                    self.damage_enemy(target)
+                    self.projectiles.remove(shot)
+                    destroy(projectile)
+                    continue
+            projectile.position += shot["velocity"] * dt
+            if shot["life"] <= 0:
+                self.projectiles.remove(shot)
+                destroy(projectile)
+
     def build_street(self):
         for entity in self.scene_entities + self.traffic:
             destroy(entity)
         for effect in self.attack_effects:
             destroy(effect)
         self.attack_effects.clear()
+        for shot in self.projectiles:
+            destroy(shot["entity"])
+        self.projectiles.clear()
         for enemy in self.enemies:
             destroy(enemy["entity"])
         self.scene_entities.clear(); self.traffic.clear()
@@ -247,6 +307,7 @@ class HybridGame:
         if self.fight_banner_time > 0:
             self.fight_banner_time -= dt
             if self.fight_banner_time <= 0: self.fight_banner.enabled = False
+        self.update_projectiles(dt)
         if self.in_car:
             forward = held_keys["s"] - held_keys["w"]
             steer = held_keys["a"] - held_keys["d"]
@@ -296,32 +357,8 @@ class HybridGame:
                 aim.y = 0
                 if aim.length():
                     self.avatar.rotation_y = math.degrees(math.atan2(aim.x, aim.z))
-                candidates = []
-                for enemy in self.enemies:
-                    if enemy["dead"]:
-                        continue
-                    to_enemy = enemy["entity"].position - self.avatar.position
-                    to_enemy.y = 0
-                    if not to_enemy.length() or to_enemy.length() > 3.2 or not aim.length():
-                        continue
-                    alignment = aim.dot(to_enemy) / (aim.length() * to_enemy.length())
-                    if alignment >= .65:
-                        candidates.append(enemy)
-                target = min(candidates, key=lambda e: distance(self.avatar, e["entity"]), default=None)
-                if target and distance(self.avatar, target["entity"]) < 3.2:
-                    self.show_cleanup_hit(target["entity"])
-                    target["hp"] -= 1; self.notice.text = "PAN BONK!"
-                    direction = target["entity"].position - self.avatar.position; direction.y = 0
-                    if direction.length(): target["entity"].animate_position(target["entity"].position + direction.normalized() * 1.3, duration=.12)
-                    target["entity"].animate_color(color.white, duration=.05)
-                    invoke(target["entity"].animate_color, target["tint"], delay=.10, duration=.12)
-                    if target["hp"] <= 0:
-                        target["dead"] = True; target["entity"].animate_rotation_z(180, duration=.18); target["entity"].animate_scale(0, duration=.2); self.coins += 5; self.xp += 10; self.save()
-                        if self.street == 2 and all(e["dead"] for e in self.enemies):
-                            invoke(self.win_game, delay=.35)
-                else:
-                    self.show_cleanup_hit(None, aim_point)
-                    self.notice.text = "NO TARGET IN RANGE"
+                self.spawn_projectile(aim_point)
+                self.notice.text = "CLEANUP SHOT // HOMING"
             elif key == "e" and distance(self.avatar if not self.in_car else self.car_entity, self.shop) < 4: self.open_shop()
             elif key == "e" and distance(self.avatar if not self.in_car else self.car_entity, self.board) < 4: self.open_quest()
             elif key == "e" and self.in_car and self.car_entity.x > 20 and all(e["dead"] for e in self.enemies):
