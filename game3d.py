@@ -51,18 +51,18 @@ class GreenEye3D:
         except (OSError, ValueError, TypeError): return PlayerData()
     def save(self): SAVE_PATH.write_text(json.dumps(self.player_data.to_dict(), indent=2))
     def create_ui(self):
-        self.title = Text("GREEN-EYE", origin=(0, 0), scale=2.2, color=NEON_YELLOW, enabled=False)
-        self.subtitle = Text("GLIWICE // NIGHT CLEANUP", origin=(0, 0), scale=1.0, color=NEON_CYAN, enabled=False)
-        self.hud = Text("", position=(-.86, .45), scale=.9, color=NEON_YELLOW, enabled=False)
-        self.help = Text("", position=(-.86, -.46), scale=.8, color=color.white, enabled=False)
-        self.message = Text("", origin=(0, 0), y=-.2, scale=1.1, color=NEON_PINK, enabled=False)
+        self.title = Text("GREEN-EYE", origin=(0, 0), scale=.08, color=NEON_YELLOW, enabled=False)
+        self.subtitle = Text("GLIWICE // NIGHT CLEANUP", origin=(0, 0), scale=.035, color=NEON_CYAN, enabled=False)
+        self.hud = Text("", position=(-.86, .45), scale=.025, color=NEON_YELLOW, enabled=False)
+        self.help = Text("", position=(-.86, -.46), scale=.022, color=color.white, enabled=False)
+        self.message = Text("", origin=(0, 0), y=-.2, scale=.04, color=NEON_PINK, enabled=False)
         self.map_panel = Entity(parent=camera.ui, model="quad", texture=MAP_TEXTURE, scale=(1.72, 1), color=color.rgba(255,255,255,190), enabled=False)
         self.menu_card = Entity(parent=camera.ui, model="quad", color=color.rgba(8,6,18,220), scale=(.64,.86), enabled=False)
-        self.start_text = Text("START CLEANUP", parent=camera.ui, origin=(0,0), y=-.05, scale=1.2, color=NEON_YELLOW, enabled=False)
-        self.controls_text = Text("CONTROLS", parent=camera.ui, origin=(0,0), y=-.15, scale=1.0, color=color.white, enabled=False)
-        self.menu_prompt = Text("ENTER / CLICK  TO START 3D CITY", parent=camera.ui, origin=(0,0), y=-.38, scale=.9, color=NEON_PINK, enabled=False)
-        self.shop_title = Text("NIGHT SHOP", parent=camera.ui, origin=(0,0), y=.3, scale=1.5, color=NEON_YELLOW, enabled=False)
-        self.shop_text = Text("", parent=camera.ui, origin=(0,0), y=.05, scale=1.0, color=color.white, enabled=False)
+        self.start_text = Text("START CLEANUP", parent=camera.ui, origin=(0,0), y=-.05, scale=.045, color=NEON_YELLOW, enabled=False)
+        self.controls_text = Text("CONTROLS", parent=camera.ui, origin=(0,0), y=-.15, scale=.038, color=color.white, enabled=False)
+        self.menu_prompt = Text("ENTER / CLICK  TO START 3D CITY", parent=camera.ui, origin=(0,0), y=-.38, scale=.028, color=NEON_PINK, enabled=False)
+        self.shop_title = Text("NIGHT SHOP", parent=camera.ui, origin=(0,0), y=.3, scale=.055, color=NEON_YELLOW, enabled=False)
+        self.shop_text = Text("", parent=camera.ui, origin=(0,0), y=.05, scale=.035, color=color.white, enabled=False)
     def clear_world(self):
         for entity in self.entities: destroy(entity)
         self.entities.clear()
@@ -72,7 +72,7 @@ class GreenEye3D:
         self.bullets.clear()
     def add_box(self, position, scale, tint, label=None):
         entity = Entity(model="cube", position=position, scale=scale, color=tint, collider="box"); self.entities.append(entity)
-        if label: self.entities.append(Text(label, world_position=Vec3(position[0], position[1] + scale[1] + .1, position[2]), billboard=True, scale=8, color=NEON_YELLOW))
+        if label: self.entities.append(Text(label, world_position=Vec3(position[0], position[1] + scale[1] + .1, position[2]), billboard=True, scale=.45, color=NEON_YELLOW))
         return entity
     def build_world(self):
         self.clear_world(); zone = self.location % 5
@@ -94,7 +94,7 @@ class GreenEye3D:
         kinds = [["thug","teen","dealer"],["teen","thug","dealer"],["thug","thug","teen"],["dealer","teen","thug"],["dealer","thug","dealer"]][zone]
         for kind,pos in zip(kinds,enemy_positions): self.enemies.append(Enemy3D(self,kind,pos))
         camera.position = (0, 25, -20); camera.rotation_x = 55; camera.rotation_y = 0
-    def add_text_label(self, text, position, tint): self.entities.append(Text(text, world_position=Vec3(*position), billboard=True, scale=8, color=tint))
+    def add_text_label(self, text, position, tint): self.entities.append(Text(text, world_position=Vec3(*position), billboard=True, scale=.45, color=tint))
     def add_bus(self, position, tint): self.add_box(position,(4,1.2,1.5),tint); self.add_box((position[0],position[1]+.5,position[2]),(3,.45,1.2),color.rgb(150,220,220))
     def add_park(self):
         self.add_box((12,.05,7),(7,.1,7),color.rgb(15,80,68)); self.add_box((12,.08,7),(3,.1,2),color.rgb(0,126,145))
@@ -161,5 +161,5 @@ def input(key):
     if game: game.input(key)
 
 app = Ursina(borderless=False, development_mode=False)
-window.title = "Green-Eye 3D // Gliwice Night Cleanup"; window.color = NIGHT; window.fps_counter.enabled = True
+window.title = "Green-Eye 3D // Gliwice Night Cleanup"; window.color = NIGHT; camera.overlay.color = NIGHT; window.fps_counter.enabled = True
 game = GreenEye3D(); game.run()
