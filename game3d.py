@@ -253,12 +253,34 @@ class HybridGame:
         line = color.rgb32(238, 209, 92)
         for z in (-3.7, 3.7): self.add(Entity(model="cube", position=(0, .16, z), scale=(64, .035, .09), color=line, shader=unlit_shader))
         for x in (-3.7, 3.7): self.add(Entity(model="cube", position=(x, .17, 0), scale=(.09, .035, 50), color=line, shader=unlit_shader))
-        houses = [("building-type-a", (-16, 5), 2.4), ("building-type-c", (-9, 5), 2.3), ("building-type-f", (9, 5), 2.4), ("building-type-h", (16, 5), 2.2), ("building-type-k", (-15, -8), 2.4), ("building-type-m", (9, -8), 2.3), ("building-type-r", (16, -8), 2.3)]
+        # Sidewalk ribbons make the road network read as connected city streets.
+        sidewalk = color.rgb32(145, 150, 162)
+        for z in (-5.2, 5.2): self.add(Entity(model="cube", position=(0, .12, z), scale=(66, .08, 1.5), texture="white_cube", shader=unlit_shader, color=sidewalk))
+        for x in (-5.2, 5.2): self.add(Entity(model="cube", position=(x, .13, 0), scale=(1.5, .08, 52), texture="white_cube", shader=unlit_shader, color=sidewalk))
+        for x in range(-24, 25, 8):
+            self.add(Entity(model=city("path-long"), position=(x, .17, 5.15), rotation_y=90, scale=1.2))
+            self.add(Entity(model=city("path-long"), position=(x, .17, -5.15), rotation_y=90, scale=1.2))
+        # Dense but readable residential blocks around the playable roads.
+        houses = [
+            ("building-type-a", (-25, 9), 2.5), ("building-type-c", (-18, 9), 2.2), ("building-type-e", (-10, 9), 2.4),
+            ("building-type-f", (10, 9), 2.4), ("building-type-h", (18, 9), 2.2), ("building-type-j", (25, 9), 2.5),
+            ("building-type-k", (-25, -9), 2.4), ("building-type-m", (-17, -9), 2.3), ("building-type-o", (-9, -9), 2.5),
+            ("building-type-p", (10, -9), 2.3), ("building-type-r", (18, -9), 2.4), ("building-type-t", (25, -9), 2.2),
+        ]
         for name, pos, size in houses: self.add(Entity(model=city(name), position=(pos[0], 0, pos[1]), scale=size, collider="box"))
-        for name, pos, size in (("tree-large", (-5, 0, 8), 1.5), ("tree-small", (12, 0, 2), 1.4), ("planter", (5, 0, 7), 1.5)):
+        # Public-space details: planters, trees, flower beds, bins and lamps.
+        for name, pos, size in (("tree-large", (-6, 0, 7), 1.5), ("tree-small", (7, 0, 7), 1.4), ("tree-large", (-7, 0, -7), 1.4), ("tree-small", (7, 0, -7), 1.4), ("planter", (5, 0, 7), 1.5), ("planter", (-5, 0, -7), 1.3)):
             self.add(Entity(model=city(name), position=pos, scale=size))
-        for name, pos, size in (("grass_1", (-8, 0, 8), 2.8), ("grass_2", (-3, 0, 8), 2.8), ("bush_1", (8, 0, 8), 2.4), ("flowers_1", (12, 0, 8), 2.2), ("fern", (-12, 0, 8), 2.0), ("grass_1", (18, 0, 5), 2.6)):
+        for name, pos, size in (("grass_1", (-8, 0, 8), 2.8), ("grass_2", (-3, 0, 8), 2.8), ("bush_1", (8, 0, 8), 2.4), ("flowers_1", (12, 0, 8), 2.2), ("fern", (-12, 0, 8), 2.0), ("grass_1", (18, 0, 7), 2.6), ("flowers_2", (-18, 0, -7), 2.0), ("bush_2", (14, 0, -7), 2.3)):
             self.add(Entity(model=nature(name), position=pos, scale=size))
+        for pos, rotation in (((-13, .1, 5.2), 0), ((13, .1, 5.2), 0), ((-13, .1, -5.2), 180), ((13, .1, -5.2), 180)):
+            self.add(Entity(model=road("light-square"), position=pos, rotation_y=rotation, scale=1.15))
+        for pos, rotation in (((-5.2, .1, 8), 90), ((5.2, .1, -8), -90)):
+            self.add(Entity(model=road("traffic-light"), position=pos, rotation_y=rotation, scale=1.2))
+        for pos in ((-20, .1, 5.3), (20, .1, -5.3), (0, .1, 9.5)):
+            self.add(Entity(model=road("road-sign-street"), position=pos, scale=1.2))
+        for pos in ((-20, .1, 7), (20, .1, -7)):
+            self.add(Entity(model=road("dumpster"), position=pos, scale=1.1))
         self.shop = self.add(Entity(model=city("building-type-b"), position=(5, 0, 10), scale=2.1, collider="box"))
         self.board = self.add(Entity(model=city("building-type-d"), position=(-5, 0, 10), scale=1.9, collider="box"))
         for label, pos, tint, width in (("SHOP [E]", (5, 3.5, 10), CYAN, 2.8), ("QUEST BOARD [E]", (-5, 3.5, 10), YELLOW, 4.0)):
