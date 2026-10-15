@@ -156,7 +156,9 @@ class HybridGame:
         self.story_bg = Entity(parent=camera.ui, model="quad", position=(0, -.31), scale=(.82, .105), color=color.rgba32(8, 12, 24, 235), enabled=False)
         self.story_text = Text("", parent=camera.ui, origin=(0, 0), y=-.31, z=-.1, scale=.82, color=YELLOW, enabled=False)
         self.boss_bar_bg = Entity(parent=camera.ui, model="quad", position=(0, .405), scale=(.54, .038), color=color.rgba32(20, 12, 24, 245), enabled=False)
-        self.boss_bar_fill = Entity(parent=camera.ui, model="quad", origin=(-.5, 0), position=(-.26, .405), scale=(.52, .024), color=PINK, enabled=False)
+        # The fill uses its centre as origin. Its position is recalculated with
+        # its width, keeping its left edge fixed inside the background bar.
+        self.boss_bar_fill = Entity(parent=camera.ui, model="quad", position=(0, .405), scale=(.52, .024), color=PINK, enabled=False)
         self.boss_name = Text("PRINCIPAL OF DISORDER", parent=camera.ui, origin=(0, 0), y=.437, z=-.1, scale=.72, color=YELLOW, enabled=False)
         self.fight_banner = Text("", parent=camera.ui, origin=(0, 0), y=.22, scale=.085, color=PINK, enabled=False)
         self.quest_panel = Entity(parent=camera.ui, model="quad", color=color.rgb32(18, 14, 32), scale=(.78, .58), enabled=False)
@@ -311,7 +313,10 @@ class HybridGame:
         self.boss_bar_fill.enabled = visible
         self.boss_name.enabled = visible
         if boss:
-            self.boss_bar_fill.scale_x = .52 * max(0, boss["hp"]) / boss["max_hp"]
+            ratio = max(0, boss["hp"]) / boss["max_hp"]
+            width = .52 * ratio
+            self.boss_bar_fill.scale_x = width
+            self.boss_bar_fill.x = -(0.52 - width) / 2
 
     def refresh_player_hud(self):
         ratio = max(0, self.player_hp) / self.max_hp
