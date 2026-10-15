@@ -120,6 +120,8 @@ class OverworldState:
             prop = load_image(name, (30, 30))
             if prop: surface.blit(prop, pos)
         pygame.draw.rect(surface, (255, 37, 116), (44, 25, 30, 18)); pygame.draw.rect(surface, (12, 9, 24), (48, 29, 22, 10)); self.label(surface, "CLEANUP HQ", (47, 32), (255, 236, 105))
+        shop_prop = load_image("city/building-wide-a.png", (34, 30))
+        if shop_prop: surface.blit(shop_prop, (88, 16))
         pygame.draw.rect(surface, (0, 222, 218), (91, 25, 27, 18)); pygame.draw.rect(surface, (12, 9, 24), (95, 29, 19, 10)); self.label(surface, "SHOP", (98, 32), (0, 222, 218))
         name_index = self.location_index % len(self.location_names)
         self.game.text(surface, f"GLIWICE // {self.location_names[name_index]}", (8, 6), 8, (0, 222, 218))

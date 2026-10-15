@@ -5,3 +5,5 @@ assets/user/city/ contains four 64x64 transparent PNG preview sprites copied fro
 assets/user/walk/ contains four frames each for runner, bruiser, punk, and businessman from the supplied GegX Free Walk Pixel Pack. These animate the player and three enemy types. assets/user/urban/tiles/ contains four 16x16 tiles from the supplied Kenney RPG Urban Pack and they are tiled across the overworld ground.
 
 assets/user/city/gliwice_map.png is the user-supplied 1674x940 map image. It is scaled with nearest-neighbor to the 320x180 menu canvas and used as the menu's progress map with district markers, coins, XP, and completed/current/locked routes.
+
+The shop uses `assets/user/city/building-wide-a.png` as its building sprite, with a procedural neon `SHOP` sign layered on top.
