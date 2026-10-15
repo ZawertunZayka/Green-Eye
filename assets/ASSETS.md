@@ -28,3 +28,8 @@ skinning loader cannot import the animated character files.
 assets/user/3d_nature/ contains the supplied vegetation GLBs. grass_1,
 grass_2, bush_1, flowers_1 and fern are placed around the park section of
 each street.
+
+assets/user/3d_kaykit/ contains the selected KayKit Prototype Bits
+Dummy_Base OBJ and texture. It is kept as a swappable character asset; the
+runtime currently uses the verified Mini Arcade OBJ models because this KayKit
+OBJ export is not accepted by the installed Ursina model loader.
