@@ -207,7 +207,7 @@ app = None
 def create_app():
     global app, game
     app = Ursina(borderless=False, development_mode=False)
-    window.title = "Green-Eye 3D // Gliwice Night Cleanup"; window.color = NIGHT; camera.overlay.color = NIGHT; window.fps_counter.enabled = True
+    window.title = "Green-Eye 3D // Gliwice Night Cleanup"; window.color = NIGHT; camera.overlay.color = color.clear; window.fps_counter.enabled = True
     game = GreenEye3D(); game.run()
 
 if __name__ == "__main__": create_app()
