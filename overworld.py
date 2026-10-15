@@ -39,7 +39,7 @@ class OverworldState:
     def handle_event(self, event) -> None:
         if self.tutorial and (event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN):
             self.tutorial = False
-            return
+            if event.type != pygame.KEYDOWN or event.key != pygame.K_e: return
         if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
             if self.pos.distance_to((58, 35)) < 30: self.game.manager.change("QUEST_BOARD")
             elif self.pos.distance_to((135, 37)) < 22: self.game.manager.change("SHOP")
