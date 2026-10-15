@@ -71,6 +71,9 @@ class OverworldState:
             for x in range(0, WIDTH, 32):
                 surface.blit(road_edge, (x, 78))
                 surface.blit(road_edge, (x, 105))
+        for name, pos, size in (("sedan", (28, 87), (30, 18)), ("taxi", (92, 87), (30, 18)), ("police", (246, 87), (30, 18)), ("van", (151, 38), (18, 30)), ("delivery", (151, 139), (18, 30)), ("truck", (285, 88), (34, 20))):
+            car = load_image(f"3d_city/Models/Cars/Previews/{name}.png", size)
+            if car: surface.blit(car, pos)
         for name, pos, size in (("building-type-a", (12, 42), 42), ("building-type-f", (53, 42), 38), ("building-type-k", (180, 42), 42), ("building-type-p", (222, 42), 38), ("building-type-u", (266, 42), 46), ("building-type-d", (10, 120), 42), ("building-type-m", (254, 120), 42), ("tree-large", (232, 28), 32), ("tree-small", (198, 70), 28), ("planter", (146, 28), 24), ("fence", (150, 120), 38)):
             prop = load_image(f"3d_city/Previews/{name}.png", (size, size))
             if prop: surface.blit(prop, pos)

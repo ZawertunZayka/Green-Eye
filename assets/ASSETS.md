@@ -10,3 +10,7 @@ assets/user/3d_city/ contains the newly supplied 3D city set: GLB buildings,
 roads, fences, planters and trees, plus the matching colormap and preview PNGs.
 The 2D overworld uses the supplied preview PNGs as pixel-art landmark sprites;
 the original GLB files are preserved for a future true-3D renderer.
+
+assets/user/3d_city/Models/Cars/ contains the supplied Kenney Car Kit in GLB
+and preview PNG formats. The street scene uses sedan, taxi, police, van,
+delivery and truck previews as traffic props.

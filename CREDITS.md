@@ -14,4 +14,8 @@ the copied GLB models. The 2D overworld uses the pack's supplied 64x64 preview
 PNG renders as building sprites; GLB files remain available for a future true-
 3D renderer.
 
+The supplied Kenney Car Kit from `/home/zawe/Загрузки/kenney_car-kit` is copied
+to `assets/user/3d_city/Models/Cars/`; its License.txt is included. Its car
+preview PNGs are used as traffic props on the 2D street.
+
 If external assets are added later, record their name, author, source URL, and license here. Only CC0 or CC-BY assets are acceptable.
