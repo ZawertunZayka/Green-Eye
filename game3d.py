@@ -168,15 +168,19 @@ class HybridGame:
         self.intro_bottom_bar = Entity(parent=camera.ui, model="quad", position=(0, -.43), scale=(2, .18), color=NIGHT)
         self.intro = Text("GLIWICE WAS QUIET...", parent=camera.ui, origin=(0, 0), y=-.39, z=-.1, scale=1.1, color=YELLOW)
         self.intro_skip = Text("PRESS ANY KEY TO SKIP", parent=camera.ui, origin=(.5, 0), x=.47, y=.455, z=-.1, scale=.55, color=color.rgba32(220, 225, 235, 190))
-        self.map_panel = Entity(parent=camera.ui, model="quad", texture=MAP, scale=(1.72, 1), color=color.rgba32(255, 255, 255, 255), enabled=False)
-        self.menu_card = Entity(parent=camera.ui, model="quad", color=color.rgba32(8, 6, 18, 248), scale=(.62, .78), enabled=False)
+        self.map_panel = Entity(parent=camera.ui, model="quad", texture=MAP, scale=(1.72, 1), z=.20,
+                                color=color.rgba32(255, 255, 255, 255), enabled=False)
+        self.menu_dim = Entity(parent=camera.ui, model="quad", scale=(2, 1), z=.12,
+                               color=color.rgba32(5, 8, 20, 105), enabled=False)
+        self.menu_card = Entity(parent=camera.ui, model="quad", position=(0, 0, .05),
+                                color=color.rgba32(8, 6, 18, 245), scale=(.58, .76), enabled=False)
         self.menu = Text("", parent=camera.ui, origin=(0, 0), y=.02, z=-.1, scale=1, color=color.white, enabled=False)
         self.menu_title = Text("GREEN-EYE", parent=camera.ui, origin=(0, 0), y=.285, z=-.12,
                                scale=1.55, color=CYAN, enabled=False)
         self.menu_progress = Text("", parent=camera.ui, origin=(0, 0), y=.17, z=-.12,
                                   scale=.72, color=YELLOW, enabled=False)
         self.menu_controls = Text("MOVE       WASD\nRUN        SHIFT\nDRIVE      S / W\nSTEER      A / D\nAIM + FIRE  MOUSE / J\nTARGET     TAB\nINTERACT   E", parent=camera.ui,
-                                 origin=(0, 0), y=-.045, z=-.12, scale=.62, color=color.white, enabled=False)
+                                 origin=(0, 0), y=-.045, z=-.12, scale=.70, color=color.white, enabled=False)
         self.menu_hint = Text("ENTER  START CLEANUP", parent=camera.ui, origin=(0, 0), y=-.335, z=-.12,
                               scale=.70, color=PINK, enabled=False)
         self.hud_bg = Entity(parent=camera.ui, model="quad", position=(0, .455), scale=(.98, .06), color=color.rgba32(8, 12, 24, 235), enabled=False)
@@ -939,7 +943,7 @@ class HybridGame:
             destroy(piece)
         self.ending_confetti.clear()
         for item in (self.intro_top_bar, self.intro_bottom_bar, self.intro, self.intro_skip,
-                     self.map_panel, self.menu_card, self.menu,
+                     self.map_panel, self.menu_dim, self.menu_card, self.menu,
                      self.menu_title, self.menu_progress, self.menu_controls, self.menu_hint,
                      self.hud_bg, self.hud, self.help_bg, self.help,
                      self.objective_bg, self.objective, self.notice_bg, self.notice,
@@ -981,7 +985,7 @@ class HybridGame:
         self.hide_ui()
         self.menu_progress.text = f"STAGE {self.street + 1} / 3    COINS {self.coins}    XP {self.xp}"
         self.state = "MENU"
-        self.intro.enabled = False; self.map_panel.enabled = True; self.menu_card.enabled = True
+        self.intro.enabled = False; self.map_panel.enabled = True; self.menu_dim.enabled = True; self.menu_card.enabled = True
         self.menu_title.enabled = self.menu_progress.enabled = self.menu_controls.enabled = self.menu_hint.enabled = True
         self.menu.enabled = False
         self.hud_bg.enabled = False; self.help_bg.enabled = False; self.notice_bg.enabled = False
