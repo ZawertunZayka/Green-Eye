@@ -14,3 +14,7 @@ the original GLB files are preserved for a future true-3D renderer.
 assets/user/3d_city/Models/Cars/ contains the supplied Kenney Car Kit in GLB
 and preview PNG formats. The street scene uses sedan, taxi, police, van,
 delivery and truck previews as traffic props.
+
+assets/user/3d_city/Models/Roads/ contains the supplied Kenney City Kit Roads
+GLB models and previews. The street uses road-straight/intersection pieces,
+traffic lights and an electricity pole from this kit.

@@ -61,6 +61,8 @@ class OverworldState:
         # Road strips use the supplied 3D-pack path renders, not Python-drawn shapes.
         road = load_image("3d_city/Previews/path-long.png", (32, 18))
         road_edge = load_image("3d_city/Previews/path-stones-long.png", (32, 12))
+        road_kit = load_image("3d_city/Models/Roads/Previews/road-straight.png", (32, 22))
+        road_cross = load_image("3d_city/Models/Roads/Previews/road-intersection.png", (48, 32))
         if road:
             for x in range(0, WIDTH, 32):
                 surface.blit(road, (x, 86))
@@ -71,9 +73,16 @@ class OverworldState:
             for x in range(0, WIDTH, 32):
                 surface.blit(road_edge, (x, 78))
                 surface.blit(road_edge, (x, 105))
+        if road_kit:
+            for x in range(0, WIDTH, 32): surface.blit(road_kit, (x, 82))
+            for y in range(24, HEIGHT, 22): surface.blit(pygame.transform.rotate(road_kit, 90), (144, y))
+        if road_cross: surface.blit(road_cross, (136, 76))
         for name, pos, size in (("sedan", (28, 87), (30, 18)), ("taxi", (92, 87), (30, 18)), ("police", (246, 87), (30, 18)), ("van", (151, 38), (18, 30)), ("delivery", (151, 139), (18, 30)), ("truck", (285, 88), (34, 20))):
             car = load_image(f"3d_city/Models/Cars/Previews/{name}.png", size)
             if car: surface.blit(car, pos)
+        for name, pos, size in (("traffic-light", (132, 66), 24), ("light-square", (116, 42), 24), ("electricity-pole", (303, 28), 28)):
+            prop = load_image(f"3d_city/Models/Roads/Previews/{name}.png", (size, size))
+            if prop: surface.blit(prop, pos)
         for name, pos, size in (("building-type-a", (12, 42), 42), ("building-type-f", (53, 42), 38), ("building-type-k", (180, 42), 42), ("building-type-p", (222, 42), 38), ("building-type-u", (266, 42), 46), ("building-type-d", (10, 120), 42), ("building-type-m", (254, 120), 42), ("tree-large", (232, 28), 32), ("tree-small", (198, 70), 28), ("planter", (146, 28), 24), ("fence", (150, 120), 38)):
             prop = load_image(f"3d_city/Previews/{name}.png", (size, size))
             if prop: surface.blit(prop, pos)

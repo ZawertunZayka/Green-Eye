@@ -18,4 +18,9 @@ The supplied Kenney Car Kit from `/home/zawe/Загрузки/kenney_car-kit` is
 to `assets/user/3d_city/Models/Cars/`; its License.txt is included. Its car
 preview PNGs are used as traffic props on the 2D street.
 
+The supplied Kenney City Kit Roads from `/home/zawe/Загрузки/kenney_city-kit-roads`
+is copied to `assets/user/3d_city/Models/Roads/`; its License.txt is included.
+Road, intersection, traffic-light and electricity-pole previews are used in
+the street scene.
+
 If external assets are added later, record their name, author, source URL, and license here. Only CC0 or CC-BY assets are acceptable.
