@@ -26,7 +26,7 @@ class MenuState:
         if event.type == pygame.KEYDOWN and event.key in (pygame.K_RETURN, pygame.K_SPACE): self.game.manager.change("OVERWORLD")
     def update(self, dt): pass
     def draw(self, surface):
-        surface.fill(COLORS["teal"]); pygame.draw.rect(surface, COLORS["green"], (18, 24, 284, 128)); self.game.text(surface, "GREEN-EYE", (87, 43), 22, COLORS["yellow"]); self.game.text(surface, "ALL TIDY NOW!", (91, 75), 10, COLORS["paper"]); self.game.text(surface, "A wholesome city cleanup adventure", (72, 103), 7, COLORS["paper"]); self.game.text(surface, "PRESS ENTER", (119, 135), 8, COLORS["pink"])
+        surface.fill(COLORS["night"]); pygame.draw.rect(surface, (45, 16, 67), (18, 24, 284, 128)); pygame.draw.rect(surface, (255, 37, 116), (18, 24, 284, 128), 2); self.game.text(surface, "GREEN-EYE", (87, 43), 22, (255, 236, 105)); self.game.text(surface, "ALL TIDY NOW!", (91, 75), 10, (0, 222, 218)); self.game.text(surface, "A neon city cleanup adventure", (80, 103), 7, COLORS["paper"]); self.game.text(surface, "PRESS ENTER", (119, 135), 8, (255, 37, 116))
 
 class QuestBoardState:
     def __init__(self, game): self.game = game

@@ -31,27 +31,31 @@ class OverworldState:
                 break
         self.message_time = max(0, self.message_time - dt)
     def draw(self, surface: pygame.Surface) -> None:
-        c = COLORS; surface.fill(c["teal"])
-        pygame.draw.rect(surface, c["green"], (0, 24, WIDTH, HEIGHT-24))
+        c = COLORS; surface.fill(c["night"])
+        pygame.draw.rect(surface, (19, 16, 42), (0, 24, WIDTH, HEIGHT-24))
         tiles = ("0002", "0003", "0004", "0010")
         for row, y in enumerate(range(24, HEIGHT, 16)):
             for col, x in enumerate(range(0, WIDTH, 16)):
                 tile = load_image(f"urban/tiles/tile_{tiles[(row + col) % len(tiles)]}.png", (16, 16))
                 if tile: surface.blit(tile, (x, y))
-        pygame.draw.rect(surface, c["shadow"], (0, 78, WIDTH, 20)); pygame.draw.rect(surface, c["shadow"], (137, 24, 20, HEIGHT-24))
-        for x in range(0, WIDTH, 16): pygame.draw.line(surface, (80, 155, 123), (x, 78), (x+8, 98))
+        # Dark streets with hot-pink lane edges and cyan cross-streets.
+        pygame.draw.rect(surface, (19, 13, 35), (0, 78, WIDTH, 20)); pygame.draw.rect(surface, (19, 13, 35), (137, 24, 20, HEIGHT-24))
+        pygame.draw.line(surface, (255, 37, 116), (0, 77), (WIDTH, 77), 2); pygame.draw.line(surface, (255, 37, 116), (0, 98), (WIDTH, 98), 1)
+        pygame.draw.line(surface, (0, 222, 218), (136, 24), (136, HEIGHT), 2); pygame.draw.line(surface, (0, 222, 218), (158, 24), (158, HEIGHT), 1)
+        for x in range(4, WIDTH, 24): pygame.draw.line(surface, (255, 178, 71), (x, 87), (x+10, 87), 1)
         # Supplied Kenney City Kit preview sprites add readable city landmarks.
         for name, pos in (("city/building-wide-a.png", (4, 52)), ("city/building-a.png", (82, 52)),
                           ("city/building-c.png", (164, 52)), ("city/skyscraper-a.png", (270, 48))):
             prop = load_image(name, (32, 32))
             if prop: surface.blit(prop, pos)
-        pygame.draw.rect(surface, c["orange"], (37, 27, 42, 22)); pygame.draw.rect(surface, c["cream"], (42, 31, 32, 14))
-        pygame.draw.rect(surface, c["red"], (48, 22, 20, 8)); pygame.draw.rect(surface, c["ink"], (54, 9, 8, 14))
-        pygame.draw.rect(surface, c["yellow"], (246, 27, 16, 30)); pygame.draw.rect(surface, c["ink"], (252, 11, 4, 18))
-        self.game.text(surface, "GLIWICE • CLEANUP DISTRICT", (8, 6), 8, c["paper"])
-        self.game.text(surface, "QUEST BOARD", (41, 34), 6, c["ink"])
+        pygame.draw.rect(surface, (255, 37, 116), (37, 27, 42, 22)); pygame.draw.rect(surface, (25, 19, 48), (42, 31, 32, 14))
+        pygame.draw.rect(surface, (0, 222, 218), (48, 22, 20, 8)); pygame.draw.rect(surface, c["ink"], (54, 9, 8, 14))
+        pygame.draw.rect(surface, (255, 178, 71), (246, 27, 16, 30)); pygame.draw.rect(surface, c["ink"], (252, 11, 4, 18))
+        self.game.text(surface, "GLIWICE // NIGHT SHIFT", (8, 6), 8, (0, 222, 218))
+        self.game.text(surface, "CLEANUP HQ", (42, 34), 6, (255, 236, 105))
+        pygame.draw.rect(surface, (255, 37, 116), (int(self.pos.x)-12, int(self.pos.y)+10, 24, 2))
         for enemy in self.enemies:
             if not enemy["done"]: draw_person(surface, int(enemy["pos"].x), int(enemy["pos"].y), kind=enemy["type"], scale=1)
         draw_person(surface, int(self.pos.x), int(self.pos.y), kind="girl", scale=1)
         self.game.draw_hud(surface)
-        self.game.text(surface, "WASD / ARROWS move   E board", (8, 171), 7, c["paper"])
+        self.game.text(surface, "WASD / ARROWS MOVE   E INTERACT", (8, 171), 7, (255, 236, 105))
