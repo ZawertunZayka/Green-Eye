@@ -176,7 +176,7 @@ class HybridGame:
             if self.fight_banner_time <= 0: self.fight_banner.enabled = False
         if self.in_car:
             forward = held_keys["s"] - held_keys["w"]
-            steer = held_keys["d"] - held_keys["a"]
+            steer = held_keys["a"] - held_keys["d"]
             if forward: self.car_entity.position += self.car_entity.forward * forward * 8 * dt
             self.car_entity.rotation_y += steer * 100 * dt
             self.car_entity.x = clamp(self.car_entity.x, -28, 28); self.car_entity.z = clamp(self.car_entity.z, -22, 22)
