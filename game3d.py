@@ -59,9 +59,12 @@ class HybridGame:
         self.map_panel = Entity(parent=camera.ui, model="quad", texture=MAP, scale=(1.72, 1), color=color.rgba(255, 255, 255, 180), enabled=False)
         self.menu_card = Entity(parent=camera.ui, model="quad", color=color.rgba(8, 6, 18, 220), scale=(.62, .78), enabled=False)
         self.menu = Text("GLIWICE // RYNEK\n\nCLEANUP PROGRESS\n\nENTER  START STREET", parent=camera.ui, origin=(0, 0), y=.08, scale=.045, color=YELLOW, enabled=False)
-        self.hud = Text("", parent=camera.ui, position=(-.48, .45), scale=.9, color=YELLOW, enabled=False)
-        self.help = Text("WASD DRIVE   E SHOP / QUEST   SPACE BRAKE   ESC MENU", parent=camera.ui, position=(-.48, -.46), scale=.8, color=color.white, enabled=False)
-        self.notice = Text("", parent=camera.ui, origin=(0, 0), y=-.28, scale=.05, color=CYAN, enabled=False)
+        self.hud_bg = Entity(parent=camera.ui, model="quad", position=(0, .455), scale=(.98, .105), color=color.rgba(8, 12, 24, 235), enabled=False)
+        self.hud = Text("", parent=camera.ui, position=(-.46, .465), scale=.82, color=YELLOW, enabled=False)
+        self.help_bg = Entity(parent=camera.ui, model="quad", position=(0, -.455), scale=(1.08, .105), color=color.rgba(8, 12, 24, 235), enabled=False)
+        self.help = Text("WASD  DRIVE / WALK     E  EXIT / ENTER / USE     J  CLEANUP HIT     ESC  MAP", parent=camera.ui, position=(-.51, -.465), scale=.68, color=color.white, enabled=False)
+        self.notice_bg = Entity(parent=camera.ui, model="quad", position=(0, -.32), scale=(.7, .1), color=color.rgba(8, 12, 24, 235), enabled=False)
+        self.notice = Text("", parent=camera.ui, origin=(0, 0), y=-.32, scale=.045, color=CYAN, enabled=False)
         self.quest_panel = Entity(parent=camera.ui, model="quad", color=color.rgb(18, 14, 32), scale=(.78, .58), enabled=False)
         self.quest_text = Text("", parent=camera.ui, origin=(0, 0), y=.03, scale=.045, color=YELLOW, enabled=False)
         self.shop_panel = Entity(parent=camera.ui, model="quad", color=color.rgb(18, 14, 32), scale=(.78, .58), enabled=False)
@@ -78,11 +81,19 @@ class HybridGame:
             destroy(enemy["entity"])
         self.scene_entities.clear(); self.traffic.clear()
         self.enemies.clear()
-        self.add(Entity(model="cube", position=(0, -.35, 0), scale=(70, .5, 55), color=color.rgb(37, 52, 42)))
+        # Continuous grass base and asphalt underlays keep the city readable even
+        # where individual road-kit meshes have small tile gaps.
+        self.add(Entity(model="cube", position=(0, -.35, 0), scale=(70, .5, 55), color=color.rgb(42, 112, 58)))
+        self.add(Entity(model="cube", position=(0, -.06, 0), scale=(66, .12, 8.2), color=color.rgb(48, 51, 61)))
+        self.add(Entity(model="cube", position=(0, -.05, 0), scale=(8.2, .12, 52), color=color.rgb(48, 51, 61)))
         # Real road GLBs, not flat Python rectangles.
         for x in range(-24, 25, 4): self.add(Entity(model=road("road-straight"), position=(x, .03, 0), scale=2.2))
         for z in range(-20, 21, 4): self.add(Entity(model=road("road-straight"), position=(0, .04, z), rotation_y=90, scale=2.2))
         self.add(Entity(model=road("road-crossroad"), position=(0, .06, 0), scale=2.3))
+        # Long, unbroken lane/curb lines instead of isolated decorative dashes.
+        line = color.rgb(238, 209, 92)
+        for z in (-3.7, 3.7): self.add(Entity(model="cube", position=(0, .16, z), scale=(64, .035, .09), color=line))
+        for x in (-3.7, 3.7): self.add(Entity(model="cube", position=(x, .17, 0), scale=(.09, .035, 50), color=line))
         houses = [("building-type-a", (-16, 5), 2.4), ("building-type-c", (-9, 5), 2.3), ("building-type-f", (9, 5), 2.4), ("building-type-h", (16, 5), 2.2), ("building-type-k", (-15, -8), 2.4), ("building-type-m", (9, -8), 2.3), ("building-type-r", (16, -8), 2.3)]
         for name, pos, size in houses: self.add(Entity(model=city(name), position=(pos[0], 0, pos[1]), scale=size, collider="box"))
         for name, pos, size in (("tree-large", (-5, 0, 8), 1.5), ("tree-small", (12, 0, 2), 1.4), ("planter", (5, 0, 7), 1.5)):
@@ -115,23 +126,26 @@ class HybridGame:
     def start(self):
         self.state = "PLAY"
         for item in (self.intro, self.map_panel, self.menu_card, self.menu, self.quest_panel, self.quest_text, self.shop_panel, self.shop_text): item.enabled = False
+        self.hud_bg.enabled = True; self.help_bg.enabled = True; self.notice_bg.enabled = True
         self.hud.enabled = True; self.help.enabled = True; self.notice.enabled = True
         self.notice.text = "3D STREET READY // E EXIT CAR"
 
     def show_menu(self):
         self.state = "MENU"
         self.intro.enabled = False; self.map_panel.enabled = True; self.menu_card.enabled = True; self.menu.enabled = True
+        self.hud_bg.enabled = False; self.help_bg.enabled = False; self.notice_bg.enabled = False
         self.hud.enabled = False; self.help.enabled = False; self.notice.enabled = False
 
     def open_quest(self):
         self.state = "QUEST"
         self.map_panel.enabled = False; self.menu_card.enabled = False; self.hud.enabled = False; self.help.enabled = False
+        self.hud_bg.enabled = False; self.help_bg.enabled = False; self.notice_bg.enabled = False
         self.quest_panel.enabled = True; self.quest_text.enabled = True
         self.quest_text.text = f"QUEST BOARD\n\nCLEAN STREET {self.street + 1}\nREMOVE 3 TARGETS\nREWARD 30 COINS + 50 XP\n\nENTER ACCEPT   E CLOSE"
 
     def open_shop(self):
         self.state = "SHOP"
-        self.shop_panel.enabled = True; self.shop_text.enabled = True; self.hud.enabled = False; self.help.enabled = False
+        self.shop_panel.enabled = True; self.shop_text.enabled = True; self.hud_bg.enabled = False; self.help_bg.enabled = False; self.notice_bg.enabled = False; self.hud.enabled = False; self.help.enabled = False
         self.shop_text.text = f"NIGHT SHOP\n\nP  PAN UPGRADE  30 COINS\n\nCOINS {self.coins}\n\nE CLOSE"
 
     def update(self, dt):
