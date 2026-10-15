@@ -95,6 +95,10 @@ class HybridGame:
         self.scene_entities: list[Entity] = []
         self.building_bounds: list[tuple[float, float, float, float]] = []
         self.traffic: list[Entity] = []
+        self.car_speed = 0.0
+        self.vehicle_time = 0.0
+        self.car_collision_cooldown = 0.0
+        self.animation_time = 0.0
         self.enemies: list[dict] = []
         self.attack_effects: list[Entity] = []
         self.projectiles: list[dict] = []
@@ -249,7 +253,7 @@ class HybridGame:
         self.building_bounds.append((low.x, high.x, low.z, high.z))
         return entity
 
-    def blocked(self, position, radius):
+    def blocked(self, position, radius, ignore=None):
         if abs(position.x) > 28 - radius or abs(position.z) > 22 - radius:
             return True
         if self.street < 2 and not all(enemy["dead"] for enemy in self.enemies) and position.x + radius > 21:
@@ -258,6 +262,13 @@ class HybridGame:
             x = clamp(position.x, left, right)
             z = clamp(position.z, bottom, top)
             if (position.x - x) ** 2 + (position.z - z) ** 2 < radius ** 2:
+                return True
+        # Vehicles are solid while driving and on foot.  Use a simple radial
+        # test here because imported GLB collider meshes are inconsistent.
+        for vehicle in [getattr(self, "car_entity", None), *self.traffic]:
+            if vehicle is None or vehicle is ignore or not vehicle.enabled:
+                continue
+            if distance(Vec3(position.x, 0, position.z), Vec3(vehicle.x, 0, vehicle.z)) < radius + 1.65:
                 return True
         return False
 
@@ -268,11 +279,12 @@ class HybridGame:
         for _ in range(steps):
             for offset in (Vec3(step.x, 0, 0), Vec3(0, 0, step.z)):
                 candidate = actor.position + offset
-                if not self.blocked(candidate, radius):
+                if not self.blocked(candidate, radius, actor):
                     actor.position = candidate
 
     def spawn_player(self, car_position=(-7, .5, 0)):
         self.car_entity = self.add(Entity(model=car("sedan"), position=car_position, scale=1.25, collider="box"))
+        self.car_entity.y = .5
         self.avatar = self.add(Entity(
             model=character("character-gamer"),
             texture=f"{CHARACTERS}/Textures/colormap.png",
@@ -584,6 +596,11 @@ class HybridGame:
         weapon = self.weapon()
         shot = Entity(model="sphere", position=start, scale=.22 + weapon["damage"] * .025,
                       color=weapon["color"], shader=unlit_shader)
+        muzzle = Entity(model="sphere", position=start, scale=.42, color=color.white, shader=unlit_shader)
+        self.attack_effects.append(muzzle)
+        invoke(self.remove_attack_effect, muzzle, delay=.07)
+        self.avatar.animate_scale(Vec3(2.38, 2.12, 2.38), duration=.045)
+        invoke(self.avatar.animate_scale, Vec3(2.25, 2.0, 2.25), duration=.08, delay=.05)
         target = self.locked_enemy if self.locked_enemy and not self.locked_enemy["dead"] else None
         self.projectiles.append({"entity": shot, "velocity": direction * weapon["speed"], "target": target,
                                  "damage": weapon["damage"], "speed": weapon["speed"], "life": 1.0})
@@ -641,6 +658,48 @@ class HybridGame:
                 self.enemy_projectiles.remove(shot)
                 destroy(projectile)
 
+    def resolve_car_collisions(self) -> None:
+        """Stop the player car at traffic and bounce it away from impacts."""
+        if not self.in_car:
+            return
+        car_pos = Vec3(self.car_entity.x, 0, self.car_entity.z)
+        for vehicle in self.traffic:
+            if distance(car_pos, Vec3(vehicle.x, 0, vehicle.z)) >= 2.7:
+                continue
+            away = car_pos - Vec3(vehicle.x, 0, vehicle.z)
+            if not away.length():
+                away = Vec3(1, 0, 0)
+            away = away.normalized()
+            self.car_entity.position += away * .12
+            self.car_speed *= -.25
+            vehicle.position -= away * .05
+        if self.car_collision_cooldown > 0:
+            return
+        for enemy in self.enemies:
+            if enemy["dead"] or distance(car_pos, enemy["entity"].position) >= 2.4:
+                continue
+            self.car_collision_cooldown = .35
+            self.car_speed *= -.35
+            # A moving car is a strong but non-gory cleanup tool.
+            self.damage_enemy(enemy, 2)
+            break
+
+    def update_visual_animations(self, dt: float, actor: Entity) -> None:
+        """Small readable motion layers that work with imported static GLBs."""
+        self.animation_time += dt
+        moving = actor is not self.car_entity and actor is not None and actor.position != getattr(self, "_last_actor_position", actor.position)
+        if self.avatar and self.avatar.enabled:
+            base_y = 0.0
+            self.avatar.y = base_y + (abs(math.sin(self.animation_time * 10.0)) * .055 if moving else 0.0)
+        for index, enemy in enumerate(self.enemies):
+            if enemy["dead"]:
+                continue
+            enemy["entity"].y = abs(math.sin(self.animation_time * 4.0 + index)) * .035
+        for index, vehicle in enumerate([self.car_entity, *self.traffic]):
+            if vehicle and vehicle.enabled:
+                vehicle.y = (.5 if vehicle is self.car_entity else .45) + math.sin(self.animation_time * 2.0 + index) * .008
+        self._last_actor_position = Vec3(actor.position)
+
     def update_target_lock(self) -> None:
         if self.locked_enemy and self.locked_enemy["dead"]:
             self.set_target_lock(self.nearest_enemy())
@@ -648,6 +707,8 @@ class HybridGame:
             self.lock_marker.position = self.locked_enemy["entity"].position + Vec3(0, 2.1, 0)
 
     def build_street(self):
+        self.car_speed = 0.0
+        self.car_collision_cooldown = 0.0
         for entity in self.scene_entities + self.traffic:
             destroy(entity)
         for effect in self.attack_effects:
@@ -733,15 +794,24 @@ class HybridGame:
                         ("planter", (-18, 0, -7), 1.2), ("planter", (18, 0, 7), 1.2))
         for name, pos, size in city_details:
             self.add(Entity(model=city(name), position=pos, scale=size))
+        # The optional nature pack contains several tree GLBs whose material
+        # references are absent on some installations.  Those render white.
+        # Use the city kit's textured trees for every tree; keep the nature
+        # pack only for grass, bushes and flowers.
+        tree_details = (
+            ("tree-large", (-27, 0, 14), 1.5), ("tree-small", (27, 0, 14), 1.5),
+            ("tree-large", (-27, 0, -14), 1.5), ("tree-small", (27, 0, -14), 1.5),
+        ) if residential else (
+            ("tree-small", (-27, 0, 16), 1.3), ("tree-large", (27, 0, 16), 1.3),
+        )
+        for name, pos, size in tree_details:
+            self.add(Entity(model=city(name), position=pos, scale=size))
         nature_details = (
             ("grass_1", (-8, 0, 8), 2.8), ("grass_2", (-3, 0, 8), 2.8), ("bush_1", (8, 0, 8), 2.4),
             ("flowers_1", (12, 0, 8), 2.2), ("fern", (-12, 0, 8), 2.0), ("grass_1", (18, 0, 7), 2.6),
-            ("oak_1", (-27, 0, 14), 1.5), ("birch_2", (27, 0, 14), 1.5),
-            ("oak_2", (-27, 0, -14), 1.5), ("birch_1", (27, 0, -14), 1.5),
             ("bush_3", (-18, 0, 14), 1.8), ("flowers_1", (18, 0, 14), 1.8),
         ) if residential else (
             ("grass_1", (-7, 0, 8), 2.0), ("bush_2", (7, 0, 8), 1.8),
-            ("birch_3", (-27, 0, 16), 1.3), ("cypress_1", (27, 0, 16), 1.3),
             ("bush_1", (-20, 0, -16), 1.5), ("grass_2", (22, 0, -17), 1.8),
         )
         for name, pos, size in nature_details:
@@ -775,7 +845,9 @@ class HybridGame:
                    ("delivery", (0, .45, 13), 90), ("police", (0, .45, -15), 90),
                    ("taxi", (18, .45, -14), 0))
         for name, pos, rotation in traffic:
-            self.traffic.append(Entity(model=car(name), position=pos, rotation_y=rotation, scale=1.2))
+            vehicle = Entity(model=car(name), position=pos, rotation_y=rotation, scale=1.2, collider="box")
+            vehicle.y = .45
+            self.traffic.append(vehicle)
         self.spawn_enemies()
         camera.position = (-7, 19, -18); camera.look_at(self.car_entity.position)
 
@@ -887,6 +959,7 @@ class HybridGame:
         if self.state != "PLAY": return
         self.attack_cooldown = max(0.0, self.attack_cooldown - dt)
         self.damage_cooldown = max(0.0, self.damage_cooldown - dt)
+        self.car_collision_cooldown = max(0.0, self.car_collision_cooldown - dt)
         if self.fight_banner_time > 0:
             self.fight_banner_time -= dt
             if self.fight_banner_time <= 0: self.fight_banner.enabled = False
@@ -901,11 +974,20 @@ class HybridGame:
             if self.story_time <= 0:
                 self.story_bg.enabled = self.story_text.enabled = False
         if self.in_car:
-            forward = held_keys["s"] - held_keys["w"]
+            throttle = held_keys["s"] - held_keys["w"]
             steer = held_keys["d"] - held_keys["a"]
-            if forward: self.move_actor(self.car_entity, self.car_entity.forward * forward * 8 * dt, 1.9)
-            self.car_entity.rotation_y += steer * 100 * dt
+            self.car_speed += throttle * 22 * dt
+            if not throttle:
+                self.car_speed *= max(0.0, 1.0 - 4.5 * dt)
+            self.car_speed = clamp(self.car_speed, -9.0, 14.0)
+            if abs(self.car_speed) > .08:
+                self.car_entity.rotation_y += steer * 92 * dt * clamp(abs(self.car_speed) / 5.0, .2, 1.5)
+                before = Vec3(self.car_entity.position)
+                self.move_actor(self.car_entity, self.car_entity.forward * self.car_speed * dt, 1.9)
+                if distance(before, self.car_entity.position) < abs(self.car_speed * dt) * .35:
+                    self.car_speed *= -.25
             self.car_entity.x = clamp(self.car_entity.x, -28, 28); self.car_entity.z = clamp(self.car_entity.z, -22, 22)
+            self.resolve_car_collisions()
             actor = self.car_entity
             self.avatar.enabled = False
         else:
@@ -942,6 +1024,7 @@ class HybridGame:
                     enemy["shot_timer"] = random.uniform(4.5, 6.5)
         self.refresh_minimap()
         self.refresh_prompt()
+        self.update_visual_animations(dt, actor)
 
     def input(self, key):
         if self.state == "INTRO": self.finish_intro()
@@ -991,12 +1074,14 @@ class HybridGame:
                 if exit_position is None:
                     return
                 self.in_car = False
+                self.car_speed = 0.0
                 self.avatar.position = exit_position
                 self.avatar.enabled = True
                 self.notice.text = "ON FOOT // J CLEANUP PAN // E ENTER CAR"
             elif key == "e" and not self.in_car and distance(self.avatar, self.car_entity) < 2.5:
                 self.set_target_lock(None)
                 self.in_car = True
+                self.car_speed = 0.0
                 self.avatar.enabled = False
                 self.notice.text = "BACK IN CAR // DRIVE TO THE NEXT STREET"
         elif self.state == "QUEST":
