@@ -5,6 +5,8 @@ from settings import WIDTH, HEIGHT, WINDOW_SCALE, FPS, TITLE, SAVE_PATH, COLORS
 from quests import Quest, starter_quest, quest_to_dict, quest_from_dict
 from overworld import OverworldState
 from fight import FightState
+from assets import load_image
+from sprites import draw_person
 
 @dataclass
 class PlayerData:
@@ -21,12 +23,37 @@ class StateManager:
     def draw(self, surface) -> None: self.states[self.current].draw(surface)
 
 class MenuState:
-    def __init__(self, game): self.game = game
+    def __init__(self, game): self.game, self.selected, self.controls = game, 0, False
     def handle_event(self, event):
-        if event.type == pygame.KEYDOWN and event.key in (pygame.K_RETURN, pygame.K_SPACE): self.game.manager.change("OVERWORLD")
+        if event.type != pygame.KEYDOWN: return
+        if self.controls:
+            if event.key in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_SPACE): self.controls = False
+            return
+        if event.key in (pygame.K_UP, pygame.K_w): self.selected = (self.selected - 1) % 2
+        elif event.key in (pygame.K_DOWN, pygame.K_s): self.selected = (self.selected + 1) % 2
+        elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+            if self.selected == 0: self.game.manager.change("OVERWORLD")
+            else: self.controls = True
     def update(self, dt): pass
     def draw(self, surface):
-        surface.fill(COLORS["night"]); pygame.draw.rect(surface, (45, 16, 67), (18, 24, 284, 128)); pygame.draw.rect(surface, (255, 37, 116), (18, 24, 284, 128), 2); self.game.text(surface, "GREEN-EYE", (87, 43), 22, (255, 236, 105)); self.game.text(surface, "ALL TIDY NOW!", (91, 75), 10, (0, 222, 218)); self.game.text(surface, "A neon city cleanup adventure", (80, 103), 7, COLORS["paper"]); self.game.text(surface, "PRESS ENTER", (119, 135), 8, (255, 37, 116))
+        surface.fill((10, 8, 21)); pygame.draw.rect(surface, (25, 12, 44), (0, 82, WIDTH, 98))
+        for x in range(-80, WIDTH + 80, 24): pygame.draw.line(surface, (66, 20, 76), (160, 82), (x, 180), 1)
+        for y in range(92, 180, 12): pygame.draw.line(surface, (43, 18, 61), (0, y), (WIDTH, y), 1)
+        for name, pos in (("city/building-a.png", (8, 54)), ("city/building-c.png", (72, 61)), ("city/skyscraper-a.png", (274, 38))):
+            prop = load_image(name, (44, 44))
+            if prop: surface.blit(prop, pos)
+        pygame.draw.line(surface, (255, 178, 71), (249, 82), (249, 25), 2); pygame.draw.line(surface, (255, 178, 71), (238, 44), (260, 44), 1)
+        draw_person(surface, 247, 132, kind="girl", scale=2, top_down=True)
+        pygame.draw.rect(surface, (11, 8, 23), (25, 20, 190, 142)); pygame.draw.rect(surface, (255, 37, 116), (25, 20, 190, 142), 2)
+        self.game.text(surface, "GREEN-EYE", (44, 34), 21, (255, 236, 105)); self.game.text(surface, "GLIWICE AFTER DARK", (57, 67), 8, (0, 222, 218)); self.game.text(surface, "A CLEANUP STORY", (72, 80), 7, COLORS["paper"])
+        if self.controls:
+            pygame.draw.rect(surface, (11, 8, 23), (37, 93, 165, 52)); pygame.draw.rect(surface, (0, 222, 218), (37, 93, 165, 52), 1)
+            self.game.text(surface, "CONTROLS", (83, 99), 9, (255, 236, 105)); self.game.text(surface, "WASD  MOVE", (52, 115), 7, COLORS["paper"]); self.game.text(surface, "J/K  HIT   L  SPECIAL", (52, 127), 7, COLORS["paper"]); self.game.text(surface, "ENTER / ESC  BACK", (52, 139), 7, COLORS["paper"])
+        else:
+            for i, label in enumerate(("START CLEANUP", "CONTROLS")):
+                color = (255, 37, 116) if i == self.selected else (87, 76, 111)
+                pygame.draw.rect(surface, color, (62, 100 + i * 19, 118, 14), 1); self.game.text(surface, label, (78, 103 + i * 19), 7, (255, 236, 105) if i == self.selected else COLORS["paper"])
+        self.game.text(surface, "ENTER SELECT   UP/DOWN CHOOSE", (55, 171), 6, (255, 178, 71))
 
 class QuestBoardState:
     def __init__(self, game): self.game = game
