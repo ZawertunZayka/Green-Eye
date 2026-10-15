@@ -15,7 +15,7 @@ The current entry point is main.py → game3d.py. Other Python modules are retai
 ## Controls
 
 - Esc: pause/menu with controls and progress; Enter: continue.
-- WASD: walk. S/W: drive forward/reverse; A/D: steer.
+- WASD: walk; hold Shift to run. S/W: drive forward/reverse; A/D: steer.
 - Mouse: aim; J or left click: shoot; Tab: toggle nearest-enemy lock.
 - E: nearby shop/board, enter or leave the car.
 - Clear the stage, drive east past x=20 and press E to continue.

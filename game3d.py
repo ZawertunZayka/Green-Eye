@@ -128,7 +128,7 @@ class HybridGame:
         self.objective_bg = Entity(parent=camera.ui, model="quad", position=(-.33, .335), scale=(.48, .095), color=color.rgba32(8, 12, 24, 235), enabled=False)
         self.objective = Text("", parent=camera.ui, position=(-.55, .355), scale=.62, color=CYAN, enabled=False)
         self.help_bg = Entity(parent=camera.ui, model="quad", position=(0, -.46), scale=(1.08, .07), color=color.rgba32(8, 12, 24, 245), enabled=False)
-        self.help = Text("W/S  DRIVE   A/D  STEER   TAB  LOCK TARGET   J  CLEANUP   E  EXIT   ESC  MENU", parent=camera.ui, position=(-.51, -.467), scale=.61, color=color.white, enabled=False)
+        self.help = Text("WASD  MOVE   SHIFT  RUN   TAB  LOCK   J  CLEANUP   E  USE   ESC  MENU", parent=camera.ui, position=(-.51, -.467), scale=.61, color=color.white, enabled=False)
         self.notice_bg = Entity(parent=camera.ui, model="quad", position=(0, -.43), scale=(.68, .055), color=color.rgba32(8, 12, 24, 220), enabled=False)
         self.notice = Text("", parent=camera.ui, origin=(0, 0), y=-.43, z=-.1, scale=.9, color=color.white, enabled=False)
         self.story_bg = Entity(parent=camera.ui, model="quad", position=(0, -.31), scale=(.82, .105), color=color.rgba32(8, 12, 24, 235), enabled=False)
@@ -290,7 +290,7 @@ class HybridGame:
         while len(self.minimap_enemy_dots) < len(self.enemies):
             self.minimap_enemy_dots.append(Entity(parent=self.minimap, model="circle", scale=.065, color=PINK, z=-.05))
         actor = self.car_entity if self.in_car else self.avatar
-        self.minimap_player.position = (actor.x / 60, -actor.z / 48, -.05)
+        self.minimap_player.position = (actor.x / 60, actor.z / 48, -.05)
         self.minimap_player.color = YELLOW if self.in_car else CYAN
         self.minimap_exit.enabled = self.street < 2 and all(enemy["dead"] for enemy in self.enemies)
         for index, dot in enumerate(self.minimap_enemy_dots):
@@ -299,7 +299,7 @@ class HybridGame:
                 continue
             enemy = self.enemies[index]
             dot.enabled = not enemy["dead"]
-            dot.position = (enemy["entity"].x / 60, -enemy["entity"].z / 48, -.05)
+            dot.position = (enemy["entity"].x / 60, enemy["entity"].z / 48, -.05)
             dot.color = YELLOW if enemy["kind"] == "zsti_boss" else PINK
 
     def damage_player(self, amount):
@@ -603,7 +603,7 @@ class HybridGame:
     def show_menu(self):
         self.hide_ui()
         self.menu.text = (f"GREEN-EYE\n\nStage {self.street + 1}/3   Coins {self.coins}   XP {self.xp}"
-                          "\n\nEnter  Continue\nWASD  Walk\nS / W  Drive / Reverse\nA / D  Steer"
+                          "\n\nEnter  Continue\nWASD  Walk   Shift  Run\nS / W  Drive / Reverse\nA / D  Steer"
                           "\nMouse + J / Click  Shoot\nTab  Target lock\nE  Interact")
         self.state = "MENU"
         self.intro.enabled = False; self.map_panel.enabled = True; self.menu_card.enabled = True; self.menu.enabled = True
@@ -669,7 +669,9 @@ class HybridGame:
             actor = self.avatar
             direction = Vec3(held_keys["d"] - held_keys["a"], 0, held_keys["w"] - held_keys["s"])
             if direction.length() and actor:
-                self.move_actor(actor, direction.normalized() * 4.5 * dt, .45)
+                running = held_keys["shift"] or held_keys["left shift"] or held_keys["right shift"]
+                walk_speed = 7.2 if running else 4.5
+                self.move_actor(actor, direction.normalized() * walk_speed * dt, .45)
                 actor.x = clamp(actor.x, -28, 28); actor.z = clamp(actor.z, -22, 22)
                 # While walking, face the direction of travel.
                 actor.rotation_y = math.degrees(math.atan2(direction.x, direction.z))
