@@ -9,6 +9,8 @@ SAVE = ROOT / "save.json"
 CITY = "assets/user/3d_city/Models/GLB"
 CARS = "assets/user/3d_city/Models/Cars/GLB"
 ROADS = "assets/user/3d_city/Models/Roads/GLB"
+MAP = "assets/user/city/gliwice_map.png"
+WALK = "assets/user/walk"
 NIGHT = color.rgb(10, 12, 24)
 CYAN = color.rgb(0, 225, 220)
 PINK = color.rgb(255, 35, 120)
@@ -30,10 +32,13 @@ def road(name):
 class HybridGame:
     """3D street layer with the project's 2D-style HUD and quest prompts."""
     def __init__(self):
-        self.state = "MENU"
+        self.state = "INTRO"
+        self.intro_time = 0.0
+        self.street = 0
         self.coins, self.xp = self.load_progress()
         self.scene_entities: list[Entity] = []
         self.traffic: list[Entity] = []
+        self.enemies: list[dict] = []
         self.create_ui()
         self.build_street()
 
@@ -48,10 +53,17 @@ class HybridGame:
         SAVE.write_text(json.dumps({"coins": self.coins, "xp": self.xp}, indent=2))
 
     def create_ui(self):
-        self.menu = Text("GREEN-EYE\n\nGLIWICE // NIGHT CLEANUP\n\nENTER  START 3D STREET", parent=camera.ui, origin=(0, 0), y=.08, scale=.055, color=YELLOW)
+        self.intro = Text("GREEN-EYE\n\nA GLIWICE CLEANUP STORY\n\nThe city needs a very cheerful cleaner.", parent=camera.ui, origin=(0, 0), y=.06, scale=.055, color=YELLOW)
+        self.map_panel = Entity(parent=camera.ui, model="quad", texture=MAP, scale=(1.72, 1), color=color.rgba(255, 255, 255, 180), enabled=False)
+        self.menu_card = Entity(parent=camera.ui, model="quad", color=color.rgba(8, 6, 18, 220), scale=(.62, .78), enabled=False)
+        self.menu = Text("GLIWICE // RYNEK\n\nCLEANUP PROGRESS\n\nENTER  START STREET", parent=camera.ui, origin=(0, 0), y=.08, scale=.045, color=YELLOW, enabled=False)
         self.hud = Text("", parent=camera.ui, position=(-.48, .45), scale=.9, color=YELLOW, enabled=False)
         self.help = Text("WASD DRIVE   E SHOP / QUEST   SPACE BRAKE   ESC MENU", parent=camera.ui, position=(-.48, -.46), scale=.8, color=color.white, enabled=False)
         self.notice = Text("", parent=camera.ui, origin=(0, 0), y=-.28, scale=.05, color=CYAN, enabled=False)
+        self.quest_panel = Entity(parent=camera.ui, model="quad", color=color.rgb(18, 14, 32), scale=(.78, .58), enabled=False)
+        self.quest_text = Text("", parent=camera.ui, origin=(0, 0), y=.03, scale=.045, color=YELLOW, enabled=False)
+        self.shop_panel = Entity(parent=camera.ui, model="quad", color=color.rgb(18, 14, 32), scale=(.78, .58), enabled=False)
+        self.shop_text = Text("", parent=camera.ui, origin=(0, 0), y=.03, scale=.045, color=CYAN, enabled=False)
 
     def add(self, entity):
         self.scene_entities.append(entity)
@@ -60,7 +72,10 @@ class HybridGame:
     def build_street(self):
         for entity in self.scene_entities + self.traffic:
             destroy(entity)
+        for enemy in self.enemies:
+            destroy(enemy["entity"])
         self.scene_entities.clear(); self.traffic.clear()
+        self.enemies.clear()
         self.add(Entity(model="cube", position=(0, -.35, 0), scale=(70, .5, 55), color=color.rgb(37, 52, 42)))
         # Real road GLBs, not flat Python rectangles.
         for x in range(-24, 25, 4): self.add(Entity(model=road("road-straight"), position=(x, .03, 0), scale=2.2))
@@ -78,14 +93,40 @@ class HybridGame:
         self.add(self.car_entity)
         for name, pos, rotation in (("taxi", (-15, .45, 0), 0), ("police", (11, .45, 0), 0), ("van", (0, .45, 12), 90), ("delivery", (0, .45, -12), 90)):
             self.traffic.append(Entity(model=car(name), position=pos, rotation_y=rotation, scale=1.2))
+        enemy_setup = (("bruiser", (11, 1.1, -5), PINK), ("punk", (14, 1.1, 6), CYAN), ("businessman", (-12, 1.1, -5), color.orange))
+        for kind, pos, tint in enemy_setup:
+            enemy = Entity(model="quad", texture=f"{WALK}/{kind}/south/00.png", billboard=True, position=pos, scale=2.2, double_sided=True)
+            self.enemies.append({"entity": enemy, "kind": kind, "hp": 2, "dead": False, "tint": tint})
+        self.add(Text(f"UL. {['ZWYCIESTWA', 'DWORCOWA', 'DOLNYCH WALOW', 'CHORZOWSKA', 'RYNEK'][self.street % 5]}", world_position=(-2, 4, -1), billboard=True, scale=1.0, color=YELLOW))
         camera.position = (-7, 19, -18); camera.look_at(self.car_entity.position)
 
     def start(self):
         self.state = "PLAY"
-        self.menu.enabled = False; self.hud.enabled = True; self.help.enabled = True; self.notice.enabled = True
+        for item in (self.intro, self.map_panel, self.menu_card, self.menu, self.quest_panel, self.quest_text, self.shop_panel, self.shop_text): item.enabled = False
+        self.hud.enabled = True; self.help.enabled = True; self.notice.enabled = True
         self.notice.text = "3D STREET READY"
 
+    def show_menu(self):
+        self.state = "MENU"
+        self.intro.enabled = False; self.map_panel.enabled = True; self.menu_card.enabled = True; self.menu.enabled = True
+        self.hud.enabled = False; self.help.enabled = False; self.notice.enabled = False
+
+    def open_quest(self):
+        self.state = "QUEST"
+        self.map_panel.enabled = False; self.menu_card.enabled = False; self.hud.enabled = False; self.help.enabled = False
+        self.quest_panel.enabled = True; self.quest_text.enabled = True
+        self.quest_text.text = f"QUEST BOARD\n\nCLEAN STREET {self.street + 1}\nREMOVE 3 TARGETS\nREWARD 30 COINS + 50 XP\n\nENTER ACCEPT   E CLOSE"
+
+    def open_shop(self):
+        self.state = "SHOP"
+        self.shop_panel.enabled = True; self.shop_text.enabled = True; self.hud.enabled = False; self.help.enabled = False
+        self.shop_text.text = f"NIGHT SHOP\n\nP  PAN UPGRADE  30 COINS\n\nCOINS {self.coins}\n\nE CLOSE"
+
     def update(self, dt):
+        if self.state == "INTRO":
+            self.intro_time += dt
+            if self.intro_time > 3.0: self.show_menu()
+            return
         if self.state != "PLAY": return
         forward = held_keys["w"] - held_keys["s"]
         steer = held_keys["d"] - held_keys["a"]
@@ -94,14 +135,34 @@ class HybridGame:
         self.car_entity.x = clamp(self.car_entity.x, -28, 28); self.car_entity.z = clamp(self.car_entity.z, -22, 22)
         camera.position = lerp(camera.position, self.car_entity.position + Vec3(0, 19, -18), dt * 4)
         camera.look_at(self.car_entity.position + Vec3(0, 0, 2))
+        for enemy in self.enemies:
+            if enemy["dead"]: continue
+            delta = self.car_entity.position - enemy["entity"].position
+            delta.y = 0
+            if delta.length() > 3: enemy["entity"].position += delta.normalized() * 1.2 * dt
         self.hud.text = f"GLIWICE // RYNEK     COINS {self.coins}     XP {self.xp}     SEDAN"
 
     def input(self, key):
-        if self.state == "MENU" and key in ("enter", "left mouse down"): self.start()
+        if self.state == "INTRO": self.show_menu()
+        elif self.state == "MENU" and key in ("enter", "left mouse down"): self.start()
         elif self.state == "PLAY":
-            if key == "escape": self.state = "MENU"; self.menu.enabled = True; self.hud.enabled = False; self.help.enabled = False
-            elif key == "e" and distance(self.car_entity, self.shop) < 4: self.notice.text = "SHOP // DRIVE-UP"
-            elif key == "e" and distance(self.car_entity, self.board) < 4: self.notice.text = "QUEST BOARD // CLEAN THE STREET"
+            if key == "escape": self.show_menu()
+            elif key in ("j", "left mouse down"):
+                target = min((e for e in self.enemies if not e["dead"]), key=lambda e: distance(self.car_entity, e["entity"]), default=None)
+                if target and distance(self.car_entity, target["entity"]) < 4:
+                    target["hp"] -= 1; self.notice.text = "PAN BONK!"
+                    if target["hp"] <= 0:
+                        target["dead"] = True; target["entity"].animate_scale(0, duration=.15); self.coins += 5; self.xp += 10; self.save()
+            elif key == "e" and distance(self.car_entity, self.shop) < 4: self.open_shop()
+            elif key == "e" and distance(self.car_entity, self.board) < 4: self.open_quest()
+            elif key == "e" and self.car_entity.x > 20 and all(e["dead"] for e in self.enemies):
+                self.street += 1; self.build_street(); self.start()
+        elif self.state == "QUEST":
+            if key in ("e", "escape"): self.start()
+            elif key == "enter": self.quest_text.text = "QUEST ACTIVE\n\nREMOVE 3 TARGETS\n\nE CLOSE"; self.notice.text = "CLEANUP JOB ACCEPTED"
+        elif self.state == "SHOP":
+            if key in ("e", "escape"): self.start()
+            elif key == "p" and self.coins >= 30: self.coins -= 30; self.save(); self.open_shop()
 
     def run(self): app.run()
 
