@@ -9,6 +9,8 @@ SAVE = ROOT / "save.json"
 CITY = "assets/user/3d_city/Models/GLB"
 CARS = "assets/user/3d_city/Models/Cars/GLB"
 ROADS = "assets/user/3d_city/Models/Roads/GLB"
+CHARACTERS = "assets/user/3d_arcade/Models/OBJ format"
+NATURE = "assets/user/3d_nature/FULL_VERSION_ALL_MODELS/GLB"
 MAP = "assets/user/city/gliwice_map.png"
 WALK = "assets/user/walk"
 NIGHT = color.rgb(10, 12, 24)
@@ -27,6 +29,14 @@ def car(name):
 
 def road(name):
     return f"{ROADS}/{name}.glb"
+
+
+def character(name):
+    return f"{CHARACTERS}/{name}.obj"
+
+
+def nature(name):
+    return f"{NATURE}/{name}.glb"
 
 
 class HybridGame:
@@ -98,6 +108,8 @@ class HybridGame:
         for name, pos, size in houses: self.add(Entity(model=city(name), position=(pos[0], 0, pos[1]), scale=size, collider="box"))
         for name, pos, size in (("tree-large", (-5, 0, 8), 1.5), ("tree-small", (12, 0, 2), 1.4), ("planter", (5, 0, 7), 1.5)):
             self.add(Entity(model=city(name), position=pos, scale=size))
+        for name, pos, size in (("grass_1", (-8, 0, 8), 2.8), ("grass_2", (-3, 0, 8), 2.8), ("bush_1", (8, 0, 8), 2.4), ("flowers_1", (12, 0, 8), 2.2), ("fern", (-12, 0, 8), 2.0), ("grass_1", (18, 0, 5), 2.6)):
+            self.add(Entity(model=nature(name), position=pos, scale=size))
         self.shop = self.add(Entity(model=city("building-type-b"), position=(5, 0, 10), scale=2.1, collider="box"))
         self.board = self.add(Entity(model=city("building-type-d"), position=(-5, 0, 10), scale=1.9, collider="box"))
         self.add(Text("SHOP [E]", world_position=(5, 3.5, 10), billboard=True, scale=1.0, color=CYAN))
@@ -107,18 +119,14 @@ class HybridGame:
         # The supplied packs contain city/vehicle models, but no humanoid GLBs.
         # Keep the character fully 3D with a small primitive body until a character
         # pack is added; the gameplay interface does not depend on the model.
-        self.avatar = self.add(Entity(model="cube", position=(-5.5, .9, 0), scale=(.7, 1.6, .7), color=YELLOW))
-        Entity(parent=self.avatar, model="sphere", y=.95, scale=.55, color=color.rgb(255, 205, 160))
-        Entity(parent=self.avatar, model="cube", y=.48, scale=(1.05, .12, 1.05), color=CYAN)
+        self.avatar = self.add(Entity(model=character("character-gamer"), position=(-5.5, 0, 0), scale=2.25))
         self.avatar.enabled = False
         self.in_car = True
         for name, pos, rotation in (("taxi", (-15, .45, 0), 0), ("police", (11, .45, 0), 0), ("van", (0, .45, 12), 90), ("delivery", (0, .45, -12), 90)):
             self.traffic.append(Entity(model=car(name), position=pos, rotation_y=rotation, scale=1.2))
-        enemy_setup = (("bruiser", (11, 1.1, -5), PINK), ("punk", (14, 1.1, 6), CYAN), ("businessman", (-12, 1.1, -5), color.orange))
-        for kind, pos, tint in enemy_setup:
-            enemy = Entity(model="cube", position=pos, scale=(.8, 1.6, .8), color=tint)
-            Entity(parent=enemy, model="sphere", y=.95, scale=.55, color=color.rgb(235, 175, 140))
-            Entity(parent=enemy, model="cube", y=.48, scale=(1.05, .12, 1.05), color=color.rgb(35, 35, 48))
+        enemy_setup = (("bruiser", (11, 0, -5), PINK, "character-employee"), ("punk", (14, 0, 6), CYAN, "character-gamer"), ("businessman", (-12, 0, -5), color.orange, "character-employee"))
+        for kind, pos, tint, model_name in enemy_setup:
+            enemy = Entity(model=character(model_name), position=pos, scale=2.25, color=tint)
             self.enemies.append({"entity": enemy, "kind": kind, "hp": 2, "dead": False, "tint": tint})
         self.add(Text(f"UL. {['ZWYCIESTWA', 'DWORCOWA', 'DOLNYCH WALOW', 'CHORZOWSKA', 'RYNEK'][self.street % 5]}", world_position=(-2, 4, -1), billboard=True, scale=1.0, color=YELLOW))
         camera.position = (-7, 19, -18); camera.look_at(self.car_entity.position)

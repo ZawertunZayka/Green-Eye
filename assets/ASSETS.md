@@ -18,3 +18,13 @@ delivery and truck previews as traffic props.
 assets/user/3d_city/Models/Roads/ contains the supplied Kenney City Kit Roads
 GLB models and previews. The street uses road-straight/intersection pieces,
 traffic lights and an electricity pole from this kit.
+
+assets/user/3d_arcade/ contains the supplied Kenney Mini Arcade assets. The
+static OBJ character-gamer model is the player and character-employee/gamer
+models are used for 3D cleanup targets. The GLB character files are retained,
+but the current Ursina loader uses the static OBJ versions because its GLB
+skinning loader cannot import the animated character files.
+
+assets/user/3d_nature/ contains the supplied vegetation GLBs. grass_1,
+grass_2, bush_1, flowers_1 and fern are placed around the park section of
+each street.

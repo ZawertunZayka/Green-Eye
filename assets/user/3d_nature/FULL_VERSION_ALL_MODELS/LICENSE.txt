@@ -1,0 +1,19 @@
+LICENSE
+
+You are allowed to:
+
+- Use these assets in personal projects.
+- Use these assets in commercial projects.
+- Modify, edit, recolor and adapt the assets.
+- Use the assets in games, prototypes, animations, renders and interactive projects.
+
+You are not allowed to:
+
+- Resell, redistribute or re-upload the original files.
+- Sell these assets as part of another asset pack.
+- Claim the assets as your own standalone work.
+- Upload the files to asset marketplaces or free download websites.
+
+Credit is appreciated but not required.
+
+Author: dglopez.

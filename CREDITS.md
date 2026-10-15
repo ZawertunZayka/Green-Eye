@@ -23,4 +23,14 @@ is copied to `assets/user/3d_city/Models/Roads/`; its License.txt is included.
 Road, intersection, traffic-light and electricity-pole previews are used in
 the street scene.
 
+The supplied Kenney Mini Arcade pack from `/home/zawe/Загрузки/kenney_mini-arcade(1).zip`
+is CC0 by Kenney (www.kenney.nl). Its static OBJ character-gamer and
+character-employee models are used for the player and cleanup targets in the 3D
+street scene. The original License.txt is preserved in assets/user/3d_arcade/.
+
+The supplied vegetation pack from `/home/zawe/Загрузки/FULL_VERSION_ALL_MODELS.zip`
+is by dglopez; its included LICENSE.txt permits use in personal and commercial
+projects. Its GLB grass, bush, flowers and fern models are used around the park
+area in the 3D street scene.
+
 If external assets are added later, record their name, author, source URL, and license here. Only CC0 or CC-BY assets are acceptable.
