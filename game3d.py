@@ -1,215 +1,239 @@
+"""Reliable 3D vertical slice for Green-Eye."""
 import json
-import random
 from pathlib import Path
-
 from ursina import *
 
 ROOT = Path(__file__).parent
 SAVE_PATH = ROOT / "save.json"
-# Ursina resolves asset names relative to the project working directory.
-# Keep these relative so Panda3D also finds them when launched from the repo.
-MAP_TEXTURE = "assets/user/city/gliwice_map.png"
-RUNNER_TEXTURE = "assets/user/walk/runner/south/00.png"
-THUG_TEXTURE = "assets/user/walk/bruiser/south/00.png"
-TEEN_TEXTURE = "assets/user/walk/punk/south/00.png"
-DEALER_TEXTURE = "assets/user/walk/businessman/south/00.png"
+INK = color.rgb(9, 8, 20)
+ROAD = color.rgb(29, 27, 48)
+BUILDING = color.rgb(72, 47, 74)
+CYAN = color.rgb(0, 225, 220)
+PINK = color.rgb(255, 35, 120)
+YELLOW = color.rgb(255, 225, 80)
+GREEN = color.rgb(50, 180, 105)
 
-NEON_PINK = color.rgb(255, 37, 116)
-NEON_CYAN = color.rgb(0, 222, 218)
-NEON_YELLOW = color.rgb(255, 236, 105)
-NIGHT = color.rgb(10, 8, 21)
 
-class PlayerData:
-    def __init__(self, data=None):
-        data = data or {}
-        self.coins = int(data.get("coins", 0)); self.xp = int(data.get("xp", 0))
-        self.max_hp = int(data.get("max_hp", 100)); self.upgrades = data.get("upgrades", {"pan": 0, "health": 0, "ammo": 0})
-        self.quest_active = bool(data.get("quest_active", False)); self.quest_progress = int(data.get("quest_progress", 0)); self.quest_complete = bool(data.get("quest_complete", False))
-        for key in ("pan", "health", "ammo"): self.upgrades.setdefault(key, 0)
-    def to_dict(self): return {"hp": self.max_hp, "max_hp": self.max_hp, "coins": self.coins, "xp": self.xp, "upgrades": self.upgrades, "quest_active": self.quest_active, "quest_progress": self.quest_progress, "quest_complete": self.quest_complete}
+class SaveData:
+    def __init__(self, raw=None):
+        raw = raw or {}
+        upgrades = raw.get("upgrades", {})
+        self.coins = int(raw.get("coins", 0))
+        self.xp = int(raw.get("xp", 0))
+        self.pan = int(raw.get("pan", upgrades.get("pan", 0)))
+        self.quest = bool(raw.get("quest", False))
+        self.quest_done = int(raw.get("quest_done", 0))
 
-class Enemy3D:
+    def dump(self):
+        return {"coins": self.coins, "xp": self.xp, "pan": self.pan,
+                "quest": self.quest, "quest_done": self.quest_done}
+
+
+class Enemy:
     def __init__(self, game, kind, position):
-        self.game, self.kind, self.position = game, kind, Vec3(*position); self.hp = {"thug": 70, "teen": 45, "dealer": 95}[kind]
+        self.game, self.kind = game, kind
+        self.hp = {"THUG": 3, "TEEN": 2, "DEALER": 4}[kind]
+        self.speed = {"THUG": 1.0, "TEEN": 1.7, "DEALER": .8}[kind]
+        tint = {"THUG": PINK, "TEEN": color.azure, "DEALER": color.orange}[kind]
+        self.entity = Entity(model="cube", position=position, scale=(.9, 1.5, .9), color=tint)
+        Text(kind, parent=self.entity, y=1.1, origin=(0, 0), scale=4, color=YELLOW)
+        self.cooldown = 0
         self.dead = False
-        texture = {"thug": THUG_TEXTURE, "teen": TEEN_TEXTURE, "dealer": DEALER_TEXTURE}[kind]
-        self.entity = Entity(model="quad", texture=texture, billboard=True, position=self.position + Vec3(0, 1.2, 0), scale=2.2, double_sided=True)
-        self.marker = Entity(model="quad", color=NEON_PINK, position=self.position + Vec3(0, .03, 0), scale=(1.5, .05), rotation_x=90)
-    def update(self, dt):
-        if self.hp <= 0: return
-        delta = self.game.player.position - self.position; distance = delta.length()
-        if distance > 3: self.position += delta.normalized() * (1.2 if self.kind == "teen" else .7) * dt
-        self.entity.position = self.position + Vec3(0, 1.2, 0); self.marker.position = self.position + Vec3(0, .03, 0)
-    def hit(self, damage):
-        if self.dead: return
-        self.hp -= damage
-        if self.hp <= 0:
-            self.dead = True; self.entity.animate_scale(0, duration=.12); self.marker.disable(); self.game.spawn_sparks(self.position); self.game.player_data.coins += 5; self.game.player_data.xp += 10; self.game.enemy_defeated()
 
-class GreenEye3D:
+    def update(self, dt):
+        if self.dead:
+            return
+        delta = self.game.player.position - self.entity.position
+        delta.y = 0
+        if delta.length() > 1.8:
+            self.entity.position += delta.normalized() * self.speed * dt
+        else:
+            self.cooldown -= dt
+            if self.cooldown <= 0:
+                self.cooldown = 1.0
+                self.game.flash("OUCH!", PINK)
+
+    def hit(self):
+        if self.dead:
+            return
+        self.hp -= 1 + self.game.data.pan // 2
+        tint = {"THUG": PINK, "TEEN": color.azure, "DEALER": color.orange}[self.kind]
+        self.entity.color = YELLOW
+        invoke(setattr, self.entity, "color", tint, delay=.12)
+        if self.hp <= 0:
+            self.dead = True
+            self.entity.animate_scale(0, duration=.12)
+            self.game.data.coins += 5
+            self.game.data.xp += 10
+            self.game.target_down()
+
+
+class GreenEye:
     def __init__(self):
-        self.state = "INTRO"; self.intro_time = 0; self.location = 0; self.player_data = self.load_save(); self.enemies = []; self.bullets = []; self.entities = []; self.story = ["The board called. Gliwice needs a cleaner.", "Neon signs point east. Keep moving.", "A station contact left one last clue.", "The old walls hide a new mess.", "The radio tower is broadcasting the final job."]
-        self.locations = ["RYNEK", "UL. ZWYCIESTWA", "UL. DWORCOWA", "DOLNYCH WALOW", "UL. CHORZOWSKA"]
-        self.menu_ui = []; self.shop_ui = []; self.tutorial = True; self.create_ui(); self.build_world()
-    def load_save(self):
-        try: return PlayerData(json.loads(SAVE_PATH.read_text()))
-        except (OSError, ValueError, TypeError): return PlayerData()
-    def save(self): SAVE_PATH.write_text(json.dumps(self.player_data.to_dict(), indent=2))
+        self.state = "INTRO"
+        self.intro_timer = 0
+        self.location = 0
+        self.data = self.load()
+        self.world, self.enemies = [], []
+        self.create_ui()
+        self.build_level()
+
+    def load(self):
+        try:
+            return SaveData(json.loads(SAVE_PATH.read_text()))
+        except (OSError, ValueError, TypeError):
+            return SaveData()
+
+    def save(self):
+        SAVE_PATH.write_text(json.dumps(self.data.dump(), indent=2))
+
     def create_ui(self):
-        # Ursina can use a white clear color on some Wayland/OpenGL setups;
-        # keep an explicit UI backdrop behind every screen.
-        self.backdrop = Entity(parent=camera.ui, model="quad", color=NIGHT, scale=(2, 2), z=1)
-        self.title = Text("GREEN-EYE", origin=(0, 0), scale=.08, color=NEON_YELLOW, enabled=False)
-        self.subtitle = Text("GLIWICE // NIGHT CLEANUP", origin=(0, 0), scale=.035, color=NEON_CYAN, enabled=False)
-        self.hud = Text("", position=(-.86, .45), scale=.025, color=NEON_YELLOW, enabled=False)
-        self.help = Text("", position=(-.86, -.46), scale=.022, color=color.white, enabled=False)
-        self.message = Text("", origin=(0, 0), y=-.2, scale=.04, color=NEON_PINK, enabled=False)
-        self.map_panel = Entity(parent=camera.ui, model="quad", texture=MAP_TEXTURE, scale=(1.72, 1), color=color.rgba(255,255,255,190), z=.5, enabled=False)
-        self.menu_card = Entity(parent=camera.ui, model="quad", color=color.rgba(8,6,18,220), scale=(.64,.86), z=.2, enabled=False)
-        self.start_text = Text("START CLEANUP", parent=camera.ui, origin=(0,0), y=-.05, scale=.045, color=NEON_YELLOW, enabled=False)
-        self.controls_text = Text("CONTROLS", parent=camera.ui, origin=(0,0), y=-.15, scale=.038, color=color.white, enabled=False)
-        self.menu_prompt = Text("ENTER / CLICK  TO START 3D CITY", parent=camera.ui, origin=(0,0), y=-.38, scale=.028, color=NEON_PINK, enabled=False)
-        self.shop_title = Text("NIGHT SHOP", parent=camera.ui, origin=(0,0), y=.3, scale=.055, color=NEON_YELLOW, enabled=False)
-        self.shop_text = Text("", parent=camera.ui, origin=(0,0), y=.05, scale=.035, color=color.white, enabled=False)
-        self.quest_title = Text("QUEST BOARD", parent=camera.ui, origin=(0,0), y=.3, scale=.055, color=NEON_YELLOW, enabled=False)
-        self.quest_text = Text("", parent=camera.ui, origin=(0,0), y=.05, scale=.035, color=color.white, enabled=False)
-    def clear_world(self):
-        for entity in self.entities: destroy(entity)
-        self.entities.clear()
-        for enemy in self.enemies: destroy(enemy.entity); destroy(enemy.marker)
-        self.enemies.clear()
-        for bullet in self.bullets: destroy(bullet["entity"])
-        self.bullets.clear()
-    def add_box(self, position, scale, tint, label=None):
-        entity = Entity(model="cube", position=position, scale=scale, color=tint, collider="box"); self.entities.append(entity)
-        if label: self.entities.append(Text(label, world_position=Vec3(position[0], position[1] + scale[1] + .1, position[2]), billboard=True, scale=.45, color=NEON_YELLOW))
-        return entity
-    def build_world(self):
-        self.clear_world(); zone = self.location % 5
-        self.ground = self.add_box((0, -0.2, 0), (42, .3, 28), color.rgb(21, 16, 39))
-        self.add_box((0, .01, 0), (42, .05, 3.2), color.rgb(30, 22, 48)); self.add_box((0, .02, 0), (3.2, .06, 28), color.rgb(30, 22, 48))
-        for x in range(-19, 20, 4): self.add_box((x, .07, 0), (1.5, .04, .08), NEON_YELLOW)
-        layouts = [[(-15,3,5,3),(-10,3,4,3),(8,3,5,3),(14,3,4,3),(-15,-10,5,3),(12,-10,8,3)], [(-16,5,4,5),(-10,5,5,3),(9,5,8,3),(16,5,4,5),(-12,-10,10,3),(10,-10,5,3)], [(-16,5,10,3),(8,5,3,5),(14,5,3,5),(-12,-10,5,3),(6,-10,8,3)], [(-16,5,5,3),(-8,5,5,3),(13,5,9,3),(-15,-10,4,3),(10,-10,4,3)], [(-15,5,8,5),(-4,5,4,5),(8,5,8,5),(16,-10,8,3),(-15,-10,8,3)]][zone]
-        self.obstacles = []
-        accents = [NEON_PINK, NEON_CYAN, color.orange, color.rgb(100,90,190), color.rgb(255,80,140)]
-        for x,z,w,d in layouts: self.add_box((x,1.5,z), (w,3,d), color.rgb(25,18,42)); self.add_box((x,3.05,z), (w+.05,.04,d+.05), accents[zone]); self.obstacles.append((x-w/2-.5,x+w/2+.5,z-d/2-.5,z+d/2+.5))
-        if zone == 2: self.add_bus((-3, .6, -6), NEON_CYAN); self.add_bus((8, .6, 7), NEON_PINK)
-        if zone == 3: self.add_park()
-        if zone == 4: self.add_box((0,1,-8),(9,2,3),color.rgb(85,40,50)); self.add_bus((11,.6,-4),color.orange)
-        self.add_box((0,.4,11),(4,.8,2),color.rgb(55,30,70)); self.add_text_label("RYNEK" if zone == 0 else self.locations[zone], (0,1.2,11), NEON_YELLOW)
-        self.shop = self.add_box((5,.8,8),(2.4,1.6,2.0),color.rgb(20,100,106)); self.obstacles.append((3.3,6.7,7,9)); self.add_text_label("SHOP  [E]", (5,2.0,8), NEON_CYAN)
-        shop_sprite = Entity(model="quad", texture="assets/user/city/building-wide-a.png", billboard=True, position=(5, 2.0, 8), scale=2.8, double_sided=True); self.entities.append(shop_sprite)
-        self.board = self.add_box((-5,.8,8),(2.8,1.6,1.0),color.rgb(125,35,75)); self.add_text_label("QUEST BOARD  [E]", (-5,2.0,8), NEON_YELLOW)
-        self.exit = self.add_box((19,.2,0),(1,.25,3),NEON_PINK); self.add_text_label("NEXT STREET", (17,1,0), NEON_YELLOW)
-        self.player = Entity(model="quad", texture=RUNNER_TEXTURE, billboard=True, position=(-8,1.2,0), scale=2.1, collider="box"); self.entities.append(self.player)
-        enemy_positions = [(-12,0,-5),(10,0,6),(15,0,-5)]
-        kinds = [["thug","teen","dealer"],["teen","thug","dealer"],["thug","thug","teen"],["dealer","teen","thug"],["dealer","thug","dealer"]][zone]
-        for kind,pos in zip(kinds,enemy_positions): self.enemies.append(Enemy3D(self,kind,pos))
-        camera.position = (0, 25, -20); camera.rotation_x = 55; camera.rotation_y = 0
-    def add_text_label(self, text, position, tint): self.entities.append(Text(text, world_position=Vec3(*position), billboard=True, scale=.45, color=tint))
-    def add_bus(self, position, tint): self.add_box(position,(4,1.2,1.5),tint); self.add_box((position[0],position[1]+.5,position[2]),(3,.45,1.2),color.rgb(150,220,220))
-    def add_park(self):
-        self.add_box((12,.05,7),(7,.1,7),color.rgb(15,80,68)); self.add_box((12,.08,7),(3,.1,2),color.rgb(0,126,145))
-        for x,z in ((9,5),(15,5),(9,9),(15,9)): self.add_box((x,1,z),(.5,2,.5),color.rgb(40,150,85))
-    def spawn_sparks(self, position):
-        for i in range(6): Entity(model="sphere", position=position+Vec3(random.uniform(-.5,.5),1,random.uniform(-.5,.5)), scale=.1, color=NEON_YELLOW, add_to_scene_entities=True)
+        self.ui_bg = Entity(parent=camera.ui, model="quad", scale=(2, 2), color=INK, z=10)
+        self.title = Text("GREEN-EYE", parent=camera.ui, origin=(0, 0), y=.16, scale=.11, color=YELLOW)
+        self.subtitle = Text("GLIWICE // NIGHT CLEANUP", parent=camera.ui, origin=(0, 0), y=.03, scale=.045, color=CYAN)
+        self.prompt = Text("ENTER  START CLEANUP", parent=camera.ui, origin=(0, 0), y=-.2, scale=.045, color=PINK)
+        self.menu_info = Text("A cheerful city cleaner\nA very tidy night\n\nWASD MOVE   J PAN SWING   E INTERACT", parent=camera.ui, origin=(0, 0), y=-.05, scale=.032, color=color.white)
+        self.hud = Text("", parent=camera.ui, position=(-.47, .43), scale=.9, color=YELLOW)
+        self.help = Text("", parent=camera.ui, position=(-.47, -.46), scale=.8, color=color.white)
+        self.message = Text("", parent=camera.ui, origin=(0, 0), y=-.25, scale=.05, color=PINK, enabled=False)
+        self.quest_panel = Entity(parent=camera.ui, model="quad", scale=(.8, .62), color=color.rgb(19, 14, 33), z=1, enabled=False)
+        self.quest_text = Text("", parent=camera.ui, origin=(0, 0), y=.03, scale=.045, color=YELLOW, enabled=False)
+        self.shop_panel = Entity(parent=camera.ui, model="quad", scale=(.8, .62), color=color.rgb(19, 14, 33), z=1, enabled=False)
+        self.shop_text = Text("", parent=camera.ui, origin=(0, 0), y=.03, scale=.045, color=YELLOW, enabled=False)
+        self.show_menu()
+
+    def build_level(self):
+        for item in self.world:
+            destroy(item)
+        for enemy in self.enemies:
+            destroy(enemy.entity)
+        self.world.clear(); self.enemies.clear()
+        self.world.append(Entity(model="plane", scale=(42, 1, 28), color=ROAD))
+        self.world.append(Entity(model="cube", position=(0, .02, 0), scale=(42, .08, 3), color=color.rgb(52, 42, 70)))
+        self.world.append(Entity(model="cube", position=(0, .03, 0), scale=(3, .09, 28), color=color.rgb(52, 42, 70)))
+        layouts = [
+            [(-14, 6, 5, 4), (-7, 6, 4, 4), (8, 6, 6, 4), (15, 6, 4, 4), (-13, -7, 7, 4), (12, -7, 7, 4)],
+            [(-14, 6, 4, 7), (-7, 6, 5, 3), (9, 6, 8, 3), (-12, -7, 10, 3), (11, -7, 5, 4)],
+            [(-14, 6, 10, 3), (8, 6, 3, 7), (14, 6, 3, 7), (-11, -7, 5, 3), (7, -7, 8, 3)],
+            [(-14, 6, 5, 3), (-7, 6, 5, 3), (12, 6, 9, 3), (-14, -7, 4, 4), (10, -7, 4, 4)],
+            [(-13, 6, 8, 5), (-3, 6, 4, 5), (8, 6, 8, 5), (-13, -7, 8, 3), (14, -7, 5, 3)],
+        ][self.location % 5]
+        accent = [PINK, CYAN, YELLOW, GREEN, color.orange][self.location % 5]
+        for x, z, sx, sz in layouts:
+            self.world.append(Entity(model="cube", position=(x, 1.5, z), scale=(sx, 3, sz), color=BUILDING))
+            self.world.append(Entity(model="cube", position=(x, 3.05, z), scale=(sx + .1, .08, sz + .1), color=accent))
+        self.world.append(Entity(model="cube", position=(5, .7, 8), scale=(2.5, 1.4, 2), color=CYAN))
+        self.world.append(Text("SHOP", world_position=(5, 2, 8), billboard=True, scale=1.4, color=YELLOW))
+        self.shop = Vec3(5, 0, 8)
+        self.world.append(Entity(model="cube", position=(-5, .7, 8), scale=(2.7, 1.4, 1), color=PINK))
+        self.world.append(Text("QUEST BOARD", world_position=(-5, 2, 8), billboard=True, scale=1.1, color=YELLOW))
+        self.board = Vec3(-5, 0, 8)
+        self.world.append(Entity(model="cube", position=(20, .5, 0), scale=(.8, 1, 3), color=YELLOW))
+        self.world.append(Text("NEXT", world_position=(18, 1.5, 0), billboard=True, scale=1.1, color=YELLOW))
+        self.player = Entity(model="cube", position=(-8, .8, 0), scale=(.9, 1.6, .9), color=YELLOW)
+        self.world.append(self.player)
+        positions = [(-11, .8, -5), (10, .8, 6), (14, .8, -5)]
+        kinds = [["THUG", "TEEN", "DEALER"], ["TEEN", "THUG", "DEALER"], ["THUG", "THUG", "TEEN"], ["DEALER", "TEEN", "THUG"], ["DEALER", "THUG", "DEALER"]][self.location % 5]
+        self.enemies = [Enemy(self, kind, pos) for kind, pos in zip(kinds, positions)]
+        camera.position = (0, 24, -19); camera.rotation_x = 55
+
     def show_menu(self):
-        self.state="MENU"; self.map_panel.enabled=True; self.menu_card.enabled=True; self.start_text.enabled=True; self.controls_text.enabled=True; self.menu_prompt.enabled=True; self.title.enabled=False; self.subtitle.enabled=False; self.hud.enabled=False; self.help.enabled=False
-    def hide_menu(self):
-        for ui in (self.map_panel,self.menu_card,self.start_text,self.controls_text,self.menu_prompt): ui.enabled=False
-    def show_shop(self):
-        self.state="SHOP"; self.shop_title.enabled=True; self.shop_text.enabled=True; self.shop_text.text="PAN POWER  $30  (P)\nHEART +20 HP  $25  (H)\nAMMO +10  $40  (A)\n\nP / H / A buy    E close"; self.hide_hud()
-    def show_quest(self):
-        self.state="QUEST"; self.quest_title.enabled=True; self.quest_text.enabled=True
-        status = "COMPLETED" if self.player_data.quest_complete else (f"PROGRESS {self.player_data.quest_progress}/3" if self.player_data.quest_active else "PRESS ENTER TO ACCEPT")
-        self.quest_text.text = f"CLEAN THE {self.locations[self.location]} BLOCK\nREMOVE 3 TARGETS   //   REWARD 30C + 50XP\n\n{status}\n\nENTER accept    E close"
-        self.hide_hud()
-    def hide_hud(self): self.hud.enabled=False; self.help.enabled=False
-    def show_hud(self):
-        self.hud.enabled=True; self.help.enabled=True; self.shop_title.enabled=False; self.shop_text.enabled=False; self.quest_title.enabled=False; self.quest_text.enabled=False; self.message.enabled=True
-        self.hud.text = f"{self.locations[self.location]}  |  COINS {self.player_data.coins}  |  XP {self.player_data.xp}  |  TARGETS {sum(enemy.hp > 0 for enemy in self.enemies)}"
-        self.help.text = "WASD MOVE   LMB SHOOT   J/K/L PAN ATTACKS   E INTERACT   CLEAR ALL -> NEXT STREET"
-    def buy(self,key):
-        prices={"pan":30,"health":25,"ammo":40}; price=prices[key]
-        if self.player_data.coins < price: self.message.text="NOT ENOUGH COINS"; invoke(setattr,self.message,"text", "", delay=1.2); return
-        self.player_data.coins -= price; self.player_data.upgrades[key] += 1
-        if key == "health": self.player_data.max_hp += 20
-        self.save(); self.message.text="UPGRADE BOUGHT!"; invoke(setattr,self.message,"text", "", delay=1.2)
-    def shoot(self):
-        if self.state != "PLAY": return
-        direction = (mouse.world_point - self.player.world_position).normalized() if mouse.world_point else Vec3(0,0,1)
-        bullet = Entity(model="sphere", position=self.player.position + Vec3(0,1,0), scale=.16, color=NEON_YELLOW); self.bullets.append({"entity":bullet,"direction":direction,"ttl":1.2})
-    def melee(self, damage, label):
-        living = [enemy for enemy in self.enemies if enemy.hp > 0]
+        self.state = "MENU"
+        for item in (self.ui_bg, self.title, self.subtitle, self.prompt, self.menu_info): item.enabled = True
+        self.hide_play_ui()
+
+    def hide_play_ui(self):
+        for item in (self.hud, self.help, self.message, self.quest_panel, self.quest_text, self.shop_panel, self.shop_text): item.enabled = False
+
+    def start(self):
+        self.state = "PLAY"
+        for item in (self.ui_bg, self.title, self.subtitle, self.prompt, self.menu_info): item.enabled = False
+        self.hud.enabled = True; self.help.enabled = True
+        self.help.text = "WASD MOVE   J PAN   E INTERACT   CLEAR STREET -> NEXT"
+        self.refresh_hud()
+
+    def refresh_hud(self):
+        alive = sum(not enemy.dead for enemy in self.enemies)
+        self.hud.text = f"GLIWICE // STREET {self.location + 1}     COINS {self.data.coins}     XP {self.data.xp}     TARGETS {alive}"
+
+    def flash(self, text, tint=PINK):
+        self.message.enabled = True; self.message.color = tint; self.message.text = text
+        invoke(self.message.disable, delay=.8)
+
+    def target_down(self):
+        if self.data.quest:
+            self.data.quest_done += 1
+            if self.data.quest_done >= 3:
+                self.data.quest = False; self.data.coins += 30; self.data.xp += 50
+                self.flash("ALL TIDY NOW!  +30 COINS +50 XP", YELLOW)
+        self.save(); self.refresh_hud()
+
+    def open_quest(self):
+        self.state = "QUEST"; self.hide_play_ui()
+        status = "COMPLETED" if self.data.quest_done >= 3 and not self.data.quest else ("ACTIVE" if self.data.quest else "PRESS ENTER TO ACCEPT")
+        self.quest_text.text = f"CLEAN STREET {self.location + 1}\n\nREMOVE 3 TARGETS\nREWARD 30 COINS + 50 XP\n\n{status}\n\nENTER ACCEPT   E CLOSE"
+        self.quest_panel.enabled = True; self.quest_text.enabled = True
+
+    def open_shop(self):
+        self.state = "SHOP"; self.hide_play_ui()
+        self.shop_text.text = f"NIGHT SHOP\n\nP  UPGRADE PAN  30 COINS\n\nCOINS: {self.data.coins}\n\nE CLOSE"
+        self.shop_panel.enabled = True; self.shop_text.enabled = True
+
+    def attack(self):
+        living = [enemy for enemy in self.enemies if not enemy.dead]
         target = min(living, key=lambda enemy: distance(self.player, enemy.entity), default=None)
-        if target and distance(self.player, target.entity) < 3.2: target.hit(damage); self.message.enabled=True; self.message.text=label; invoke(setattr,self.message,"text", "", delay=.45)
-    def enemy_defeated(self):
-        if self.player_data.quest_active:
-            self.player_data.quest_progress = min(3, self.player_data.quest_progress + 1)
-            if self.player_data.quest_progress >= 3:
-                self.player_data.quest_active = False; self.player_data.quest_complete = True; self.player_data.coins += 30; self.player_data.xp += 50
-                self.message.enabled=True; self.message.text="ALL TIDY NOW!  +30 COINS  +50 XP"; invoke(setattr,self.message,"text", "", delay=2.0)
-        self.save()
-    def update_bullets(self, dt):
-        for bullet in self.bullets[:]:
-            bullet["entity"].position += bullet["direction"] * 22 * dt; bullet["ttl"] -= dt
-            hit = next((enemy for enemy in self.enemies if enemy.hp > 0 and distance(bullet["entity"], enemy.entity) < 1.2), None)
-            if hit: hit.hit(35 + self.player_data.upgrades["ammo"]*10); bullet["ttl"] = 0
-            if bullet["ttl"] <= 0: destroy(bullet["entity"]); self.bullets.remove(bullet)
+        if target and distance(self.player, target.entity) < 3.2:
+            target.hit(); self.flash("PAN BONK!", YELLOW)
+
     def update(self, dt):
         if self.state == "INTRO":
-            self.intro_time += dt
-            if self.intro_time > 3.5: self.show_menu()
+            self.intro_timer += dt
+            if self.intro_timer > 1.6: self.show_menu()
             return
         if self.state != "PLAY": return
-        movement = Vec3(held_keys["d"] - held_keys["a"], 0, held_keys["s"] - held_keys["w"])
-        if movement.length():
-            step = movement.normalized() * 7 * dt
-            candidate = self.player.position + step
-            blocked = any(left < candidate.x < right and front < candidate.z < back for left, right, front, back in self.obstacles)
-            if not blocked: self.player.position = candidate
-        self.player.x = clamp(self.player.x,-19,19); self.player.z = clamp(self.player.z,-12,12); camera.position = lerp(camera.position, Vec3(self.player.x,25,self.player.z-20), dt*3)
+        move = Vec3(held_keys["d"] - held_keys["a"], 0, held_keys["s"] - held_keys["w"])
+        if move.length(): self.player.position += move.normalized() * 6 * dt
+        self.player.x = clamp(self.player.x, -19, 19); self.player.z = clamp(self.player.z, -12, 12)
         for enemy in self.enemies: enemy.update(dt)
-        self.update_bullets(dt)
-        if all(enemy.hp <= 0 for enemy in self.enemies): self.exit.color=NEON_YELLOW
-        self.hud.text = f"{self.locations[self.location]}  |  COINS {self.player_data.coins}  |  XP {self.player_data.xp}  |  TARGETS {sum(enemy.hp > 0 for enemy in self.enemies)}"
-    def input(self,key):
-        if self.state == "INTRO" and key not in ("mouse left",): self.show_menu(); return
-        if self.state == "MENU" and key in ("enter", "left mouse down"): self.hide_menu(); self.state="PLAY"; self.show_hud(); return
-        if self.state == "MENU" and key == "c": self.message.enabled=True; self.message.text="WASD move | LMB shoot | J/K/L pan attacks | E shop/quest/exit"; invoke(setattr,self.message,"text", "", delay=3); return
-        if self.state == "PLAY":
-            if key == "left mouse down": self.shoot()
-            elif key == "j": self.melee(18 + self.player_data.upgrades["pan"] * 6, "PAN SWING!")
-            elif key == "k": self.melee(25 + self.player_data.upgrades["pan"] * 8, "ROLLING PIN!")
-            elif key == "l": self.melee(35 + self.player_data.upgrades["pan"] * 10, "SOUP SPLASH!")
-            elif key == "e" and distance(self.player,self.shop) < 3: self.show_shop()
-            elif key == "e" and distance(self.player,self.board) < 3: self.show_quest()
-            elif key == "e" and self.player.x > 17 and all(enemy.hp <= 0 for enemy in self.enemies):
-                self.location += 1; self.player_data.quest_active=False; self.player_data.quest_progress=0; self.player_data.quest_complete=False; self.save(); self.build_world(); self.show_hud()
-        elif self.state == "SHOP":
-            if key == "escape" or key == "e": self.state="PLAY"; self.show_hud()
-            elif key == "p": self.buy("pan")
-            elif key == "h": self.buy("health")
-            elif key == "a": self.buy("ammo")
+        camera.position = lerp(camera.position, Vec3(self.player.x, 24, self.player.z - 19), dt * 3)
+        self.refresh_hud()
+
+    def input(self, key):
+        if self.state == "INTRO": self.show_menu()
+        elif self.state == "MENU" and key in ("enter", "left mouse down"): self.start()
+        elif self.state == "PLAY":
+            if key in ("j", "left mouse down"): self.attack()
+            elif key == "e" and distance(self.player.position, self.shop) < 3: self.open_shop()
+            elif key == "e" and distance(self.player.position, self.board) < 3: self.open_quest()
+            elif key == "e" and self.player.x > 17 and all(enemy.dead for enemy in self.enemies):
+                self.location += 1; self.data.quest = False; self.data.quest_done = 0; self.save(); self.build_level()
         elif self.state == "QUEST":
-            if key in ("escape", "e"): self.state="PLAY"; self.show_hud()
-            elif key == "enter" and not self.player_data.quest_active and not self.player_data.quest_complete:
-                self.player_data.quest_active=True; self.player_data.quest_progress=0; self.save(); self.show_quest()
-    def run(self):
-        self.state="INTRO"; self.hide_menu(); self.title.enabled=True; self.title.text="GREEN-EYE"; self.title.position=(0,.15); self.subtitle.enabled=True; self.subtitle.text="GLIWICE // NIGHT CLEANUP"; self.subtitle.position=(0,-.02)
-        app.run()
+            if key in ("e", "escape"): self.start()
+            elif key == "enter" and not self.data.quest and self.data.quest_done < 3:
+                self.data.quest = True; self.data.quest_done = 0; self.save(); self.open_quest()
+        elif self.state == "SHOP":
+            if key in ("e", "escape"): self.start()
+            elif key == "p" and self.data.coins >= 30:
+                self.data.coins -= 30; self.data.pan += 1; self.save(); self.open_shop()
+
 
 game = None
+app = None
+
+
 def update():
     if game: game.update(time.dt)
+
+
 def input(key):
     if game: game.input(key)
 
-app = None
+
 def create_app():
     global app, game
     app = Ursina(borderless=False, development_mode=False)
-    window.title = "Green-Eye 3D // Gliwice Night Cleanup"; window.color = NIGHT; camera.overlay.color = color.clear; window.fps_counter.enabled = True
-    game = GreenEye3D(); game.run()
+    window.title = "Green-Eye // Gliwice Cleanup"; window.color = INK; window.fps_counter.enabled = True
+    game = GreenEye(); app.run()
+
 
 if __name__ == "__main__": create_app()
