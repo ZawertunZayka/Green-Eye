@@ -15,15 +15,23 @@ class OverworldState:
         self.pos = pygame.Vector2(112, 112)
         self.enemies = []
         self.spawn_location()
-        self.buildings = [pygame.Rect(5, 52, 40, 20), pygame.Rect(49, 52, 34, 20), pygame.Rect(178, 50, 34, 16),
-                          pygame.Rect(218, 50, 30, 16), pygame.Rect(264, 52, 50, 18), pygame.Rect(4, 144, 40, 22),
-                          pygame.Rect(250, 144, 64, 22)]
+        self.buildings = []
+        self.building_accent = (255, 37, 116)
     def spawn_location(self) -> None:
         layouts = [[("thug", (70, 126)), ("teen", (213, 43)), ("dealer", (270, 126))],
                    [("teen", (70, 126)), ("thug", (212, 42)), ("dealer", (270, 126))],
                    [("thug", (70, 126)), ("thug", (212, 42)), ("teen", (270, 126))],
                    [("dealer", (70, 126)), ("teen", (212, 42)), ("thug", (270, 126))],
                    [("dealer", (70, 126)), ("thug", (212, 42)), ("dealer", (270, 126))]]
+        building_layouts = [
+            [(5, 52, 40, 20), (49, 52, 34, 20), (178, 50, 34, 16), (218, 50, 30, 16), (264, 52, 50, 18), (4, 144, 40, 22), (250, 144, 64, 22)],
+            [(5, 45, 24, 28), (33, 45, 42, 17), (180, 49, 54, 18), (240, 45, 32, 24), (278, 45, 36, 24), (8, 145, 62, 20), (178, 145, 38, 20)],
+            [(5, 50, 68, 15), (180, 48, 26, 24), (211, 48, 26, 24), (242, 48, 26, 24), (273, 48, 41, 24), (106, 145, 54, 20), (218, 145, 48, 20)],
+            [(5, 49, 32, 18), (44, 49, 32, 18), (257, 48, 57, 18), (4, 145, 29, 21), (39, 145, 29, 21), (185, 145, 34, 21), (225, 145, 40, 21)],
+            [(5, 46, 52, 25), (65, 46, 28, 25), (177, 45, 28, 25), (211, 45, 49, 25), (269, 45, 45, 25), (5, 145, 72, 20), (250, 145, 64, 20)],
+        ]
+        self.buildings = [pygame.Rect(*rect) for rect in building_layouts[self.location_index % len(building_layouts)]]
+        self.building_accent = ((255, 37, 116), (0, 222, 218), (255, 178, 71), (96, 88, 180), (255, 72, 137))[self.location_index % 5]
         layout = list(layouts[self.location_index % len(layouts)])
         random.Random(100 + self.location_index).shuffle(layout)
         self.enemies = [{"type": kind, "pos": pygame.Vector2(pos), "done": False} for kind, pos in layout]
@@ -106,7 +114,7 @@ class OverworldState:
         pygame.draw.line(surface, (255, 178, 71), (282, 71), (282, 27), 2); pygame.draw.line(surface, (255, 178, 71), (270, 55), (294, 55), 1); pygame.draw.line(surface, (255, 178, 71), (276, 43), (288, 43), 1)
         self.label(surface, "RADIO TOWER", (261, 20), (255, 178, 71))
         # Residential blocks and Kenney building sprites.
-        for rect in self.buildings: self.building(surface, rect, (255, 37, 116))
+        for rect in self.buildings: self.building(surface, rect, self.building_accent)
         for name, pos in (("city/building-wide-a.png", (8, 48)), ("city/building-a.png", (50, 48)), ("city/building-c.png", (265, 48)), ("city/skyscraper-a.png", (274, 138))):
             prop = load_image(name, (30, 30))
             if prop: surface.blit(prop, pos)
