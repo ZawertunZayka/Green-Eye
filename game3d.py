@@ -141,7 +141,7 @@ class HybridGame:
             self.traffic.append(Entity(model=car(name), position=pos, rotation_y=rotation, scale=1.2))
         enemy_setup = (("bruiser", (11, 0, -5), PINK, "Warrior"), ("punk", (14, 0, 6), CYAN, "Rogue"), ("businessman", (-12, 0, -5), color.orange, "Mage"))
         for kind, pos, tint, model_name in enemy_setup:
-            enemy = Entity(model=skeleton(model_name), position=pos, rotation_x=-90, scale=.9, color=tint)
+            enemy = Entity(model=skeleton(model_name), position=pos, rotation_x=-90, scale=.65, color=tint)
             self.enemies.append({"entity": enemy, "kind": kind, "hp": 2, "dead": False, "tint": tint})
         self.add(Text(f"UL. {['ZWYCIESTWA', 'DWORCOWA', 'DOLNYCH WALOW', 'CHORZOWSKA', 'RYNEK'][self.street % 5]}", world_position=(-2, 4, -1), billboard=True, scale=1.0, color=YELLOW))
         camera.position = (-7, 19, -18); camera.look_at(self.car_entity.position)
@@ -195,8 +195,8 @@ class HybridGame:
             if direction.length() and actor:
                 actor.position += direction.normalized() * 4.5 * dt
                 actor.x = clamp(actor.x, -28, 28); actor.z = clamp(actor.z, -22, 22)
-        camera.position = lerp(camera.position, actor.position + Vec3(0, 15 if not self.in_car else 19, -14 if not self.in_car else -18), dt * 4)
-        camera.look_at(actor.position + Vec3(0, 0, 1))
+        camera.position = lerp(camera.position, actor.position + Vec3(0, 11 if not self.in_car else 17, -16 if not self.in_car else -18), dt * 4)
+        camera.look_at(actor.position + Vec3(0, 1.2 if not self.in_car else 0, 1))
         for enemy in self.enemies:
             if enemy["dead"]: continue
             delta = actor.position - enemy["entity"].position
