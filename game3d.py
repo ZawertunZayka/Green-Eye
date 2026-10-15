@@ -242,7 +242,9 @@ class HybridGame:
             actor = self.car_entity
             # The player stays outside the car and follows it like a companion.
             self.avatar.enabled = True
-            self.avatar.position = self.car_entity.position - self.car_entity.forward * 2.5 + Vec3(0, -.5, 0)
+            # The sedan mesh faces opposite to its local forward axis, so the
+            # positive offset is the visual rear of the car in this scene.
+            self.avatar.position = self.car_entity.position + self.car_entity.forward * 3.0 + self.car_entity.right * .8 + Vec3(0, -.5, 0)
             to_car = self.car_entity.position - self.avatar.position
             self.avatar.rotation_y = math.degrees(math.atan2(to_car.x, to_car.z))
         else:
