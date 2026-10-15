@@ -384,6 +384,7 @@ class HybridGame:
             camera_position = actor.position + Vec3(0, 11, 0) - self.camera_heading * 16
         camera.position = lerp(camera.position, camera_position, dt * 4)
         camera.look_at(camera_target)
+        camera.rotation_z = 0
         for enemy in self.enemies:
             if enemy["dead"]: continue
             delta = actor.position - enemy["entity"].position
