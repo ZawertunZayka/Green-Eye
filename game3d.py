@@ -67,6 +67,8 @@ class HybridGame:
         self.enemies: list[dict] = []
         self.attack_effects: list[Entity] = []
         self.projectiles: list[dict] = []
+        self.locked_enemy: dict | None = None
+        self.lock_marker: Entity | None = None
         self.avatar: Entity | None = None
         self.in_car = True
         self.attack_cooldown = 0.0
@@ -94,7 +96,7 @@ class HybridGame:
         self.objective_bg = Entity(parent=camera.ui, model="quad", position=(-.33, .335), scale=(.48, .095), color=color.rgba32(8, 12, 24, 235), enabled=False)
         self.objective = Text("", parent=camera.ui, position=(-.55, .355), scale=.62, color=CYAN, enabled=False)
         self.help_bg = Entity(parent=camera.ui, model="quad", position=(0, -.46), scale=(1.08, .07), color=color.rgba32(8, 12, 24, 245), enabled=False)
-        self.help = Text("W/S  DRIVE   A/D  STEER   E  EXIT / ENTER   J  CLEANUP   ESC  MENU", parent=camera.ui, position=(-.51, -.467), scale=.68, color=color.white, enabled=False)
+        self.help = Text("W/S  DRIVE   A/D  STEER   TAB  LOCK TARGET   J  CLEANUP   E  EXIT   ESC  MENU", parent=camera.ui, position=(-.51, -.467), scale=.61, color=color.white, enabled=False)
         self.notice_bg = Entity(parent=camera.ui, model="quad", position=(0, -.32), scale=(.62, .07), color=color.rgba32(8, 12, 24, 245), enabled=False)
         self.notice = Text("", parent=camera.ui, origin=(0, 0), y=-.32, scale=.045, color=CYAN, enabled=False)
         self.fight_banner = Text("", parent=camera.ui, origin=(0, 0), y=.22, scale=.085, color=PINK, enabled=False)
@@ -146,6 +148,18 @@ class HybridGame:
             self.attack_effects.remove(effect)
         destroy(effect)
 
+    def set_target_lock(self, target: dict | None) -> None:
+        if self.lock_marker:
+            destroy(self.lock_marker)
+            self.lock_marker = None
+        self.locked_enemy = target
+        if target:
+            self.lock_marker = Entity(model="quad", position=target["entity"].position + Vec3(0, 2.1, 0), scale=1.25, color=color.rgba32(255, 55, 120, 220), billboard=True, double_sided=True)
+
+    def nearest_enemy(self) -> dict | None:
+        alive = [enemy for enemy in self.enemies if not enemy["dead"]]
+        return min(alive, key=lambda enemy: distance(self.avatar, enemy["entity"]), default=None)
+
     def damage_enemy(self, target: dict) -> None:
         """Apply one hit after a cleanup projectile reaches its target."""
         entity = target["entity"]
@@ -176,7 +190,8 @@ class HybridGame:
             direction = self.avatar.forward
         direction = direction.normalized()
         shot = Entity(model="sphere", position=start, scale=.22, color=YELLOW, shader=unlit_shader)
-        self.projectiles.append({"entity": shot, "velocity": direction * 15, "target": None, "life": 1.0})
+        target = self.locked_enemy if self.locked_enemy and not self.locked_enemy["dead"] else None
+        self.projectiles.append({"entity": shot, "velocity": direction * 15, "target": target, "life": 1.0})
 
     def update_projectiles(self, dt: float) -> None:
         for shot in self.projectiles[:]:
@@ -202,6 +217,12 @@ class HybridGame:
                 self.projectiles.remove(shot)
                 destroy(projectile)
 
+    def update_target_lock(self) -> None:
+        if self.locked_enemy and self.locked_enemy["dead"]:
+            self.set_target_lock(self.nearest_enemy())
+        if self.locked_enemy and self.lock_marker:
+            self.lock_marker.position = self.locked_enemy["entity"].position + Vec3(0, 2.1, 0)
+
     def build_street(self):
         for entity in self.scene_entities + self.traffic:
             destroy(entity)
@@ -211,6 +232,7 @@ class HybridGame:
         for shot in self.projectiles:
             destroy(shot["entity"])
         self.projectiles.clear()
+        self.set_target_lock(None)
         for enemy in self.enemies:
             destroy(enemy["entity"])
         self.scene_entities.clear(); self.traffic.clear()
@@ -308,6 +330,7 @@ class HybridGame:
             self.fight_banner_time -= dt
             if self.fight_banner_time <= 0: self.fight_banner.enabled = False
         self.update_projectiles(dt)
+        self.update_target_lock()
         if self.in_car:
             forward = held_keys["s"] - held_keys["w"]
             steer = held_keys["a"] - held_keys["d"]
@@ -328,6 +351,11 @@ class HybridGame:
                 # When idle, keep looking back at the car.
                 to_car = self.car_entity.position - actor.position
                 actor.rotation_y = math.degrees(math.atan2(to_car.x, to_car.z))
+            if actor and self.locked_enemy and not self.locked_enemy["dead"]:
+                to_target = self.locked_enemy["entity"].position - actor.position
+                to_target.y = 0
+                if to_target.length():
+                    actor.rotation_y = math.degrees(math.atan2(to_target.x, to_target.z))
         camera.position = lerp(camera.position, actor.position + Vec3(0, 11 if not self.in_car else 17, -16 if not self.in_car else -18), dt * 4)
         camera.look_at(actor.position + Vec3(0, 1.2 if not self.in_car else 0, 1))
         for enemy in self.enemies:
@@ -346,13 +374,23 @@ class HybridGame:
         elif self.state == "MENU" and key in ("enter", "left mouse down"): self.start()
         elif self.state == "PLAY":
             if key == "escape": self.show_menu()
+            elif key == "tab":
+                if self.in_car:
+                    self.notice.text = "EXIT THE CAR TO LOCK A TARGET"
+                elif self.locked_enemy:
+                    self.set_target_lock(None)
+                    self.notice.text = "TARGET LOCK OFF"
+                else:
+                    target = self.nearest_enemy()
+                    self.set_target_lock(target)
+                    self.notice.text = "TARGET LOCK ON" if target else "NO TARGETS LEFT"
             elif key in ("j", "left mouse down"):
                 if self.in_car:
                     self.notice.text = "E EXIT CAR TO START A CLEANUP FIGHT"
                     return
                 if self.attack_cooldown > 0: return
                 self.attack_cooldown = .28
-                aim_point = self.get_mouse_aim_point()
+                aim_point = self.locked_enemy["entity"].position if self.locked_enemy and not self.locked_enemy["dead"] else self.get_mouse_aim_point()
                 aim = aim_point - self.avatar.position
                 aim.y = 0
                 if aim.length():
