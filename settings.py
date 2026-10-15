@@ -12,7 +12,7 @@ FOUND_ASSETS = ASSET_ROOT / "found"
 GENERATED_ASSETS = ASSET_ROOT / "generated"
 
 COLORS = {
-    "ink": (31, 27, 45), "cream": (255, 238, 194), "paper": (255, 246, 211),
+    "ink": (31, 27, 45), "night": (13, 10, 27), "cream": (255, 238, 194), "paper": (255, 246, 211),
     "pink": (242, 111, 142), "red": (211, 65, 85), "green": (67, 174, 117),
     "lime": (177, 224, 103), "teal": (41, 126, 132), "sky": (128, 199, 220),
     "blue": (61, 96, 164), "yellow": (255, 211, 92), "orange": (239, 137, 69),

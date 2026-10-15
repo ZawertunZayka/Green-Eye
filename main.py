@@ -5,6 +5,8 @@ from settings import WIDTH, HEIGHT, WINDOW_SCALE, FPS, TITLE, SAVE_PATH, COLORS
 from quests import Quest, starter_quest, quest_to_dict, quest_from_dict
 from overworld import OverworldState
 from fight import FightState
+from assets import load_image
+from sprites import draw_person
 
 @dataclass
 class PlayerData:
@@ -20,13 +22,66 @@ class StateManager:
     def update(self, dt) -> None: self.states[self.current].update(dt)
     def draw(self, surface) -> None: self.states[self.current].draw(surface)
 
-class MenuState:
-    def __init__(self, game): self.game = game
+class IntroState:
+    def __init__(self, game): self.game, self.timer = game, 0.0
     def handle_event(self, event):
-        if event.type == pygame.KEYDOWN and event.key in (pygame.K_RETURN, pygame.K_SPACE): self.game.manager.change("OVERWORLD")
+        if event.type == pygame.KEYDOWN or event.type == pygame.MOUSEBUTTONDOWN: self.game.manager.change("MENU")
+    def update(self, dt):
+        self.timer += dt
+        if self.timer >= 4.5: self.game.manager.change("MENU")
+    def draw(self, surface):
+        t = self.timer; pulse = int(190 + 55 * ((pygame.time.get_ticks() // 180) % 2)); surface.fill((9, 7, 20)); pygame.draw.rect(surface, (22, 11, 43), (0, 88, WIDTH, 92))
+        for x in range(-70, WIDTH + 70, 25): pygame.draw.line(surface, (63, 19, 75), (160, 88), (x, 180), 1)
+        for y in range(96, 180, 12): pygame.draw.line(surface, (42, 17, 58), (0, y), (WIDTH, y), 1)
+        pygame.draw.line(surface, (255, 178, 71), (266, 88), (266, 22), 2); pygame.draw.line(surface, (255, 178, 71), (256, 47), (276, 47), 1)
+        for name, pos in (("city/building-a.png", (10, 53)), ("city/building-c.png", (62, 60)), ("city/skyscraper-a.png", (278, 40))):
+            prop = load_image(name, (42, 42))
+            if prop: surface.blit(prop, pos)
+        runner_x = int(-25 + min(1.0, t / 2.2) * 130)
+        draw_person(surface, runner_x, 135, kind="girl", scale=2, top_down=True)
+        if t > 1.2: self.game.text(surface, "GREEN-EYE", (79, 49), 22, (255, 236, 105))
+        if t > 1.8: self.game.text(surface, "ALL TIDY NOW!", (91, 80), 10, (0, 222, 218))
+        if t > 2.5: self.game.text(surface, "A GLIWICE CLEANUP STORY", (80, 103), 7, COLORS["paper"])
+        if t > 3.2: self.game.text(surface, "PRESS ANY KEY", (113, 143), 7, (pulse, 37, 116))
+        self.game.text(surface, "15.10.2026 // NIGHT SHIFT", (89, 171), 6, (255, 178, 71))
+
+class MenuState:
+    def __init__(self, game): self.game, self.selected, self.controls = game, 0, False
+    def handle_event(self, event):
+        if event.type != pygame.KEYDOWN: return
+        if self.controls:
+            if event.key in (pygame.K_ESCAPE, pygame.K_RETURN, pygame.K_SPACE): self.controls = False
+            return
+        if event.key in (pygame.K_UP, pygame.K_w): self.selected = (self.selected - 1) % 2
+        elif event.key in (pygame.K_DOWN, pygame.K_s): self.selected = (self.selected + 1) % 2
+        elif event.key in (pygame.K_RETURN, pygame.K_SPACE):
+            if self.selected == 0: self.game.manager.change("OVERWORLD")
+            else: self.controls = True
     def update(self, dt): pass
     def draw(self, surface):
-        surface.fill(COLORS["teal"]); pygame.draw.rect(surface, COLORS["green"], (18, 24, 284, 128)); self.game.text(surface, "GREEN-EYE", (87, 43), 22, COLORS["yellow"]); self.game.text(surface, "ALL TIDY NOW!", (91, 75), 10, COLORS["paper"]); self.game.text(surface, "A wholesome city cleanup adventure", (72, 103), 7, COLORS["paper"]); self.game.text(surface, "PRESS ENTER", (119, 135), 8, COLORS["pink"])
+        map_image = load_image("city/gliwice_map.png", (WIDTH, HEIGHT))
+        if map_image: surface.blit(map_image, (0, 0))
+        else: surface.fill(COLORS["night"])
+        overlay = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA); overlay.fill((5, 4, 18, 118)); surface.blit(overlay, (0, 0))
+        pygame.draw.rect(surface, (10, 8, 23), (8, 8, 304, 164), 2); pygame.draw.rect(surface, (255, 37, 116), (8, 8, 304, 164), 1)
+        self.game.text(surface, "GREEN-EYE", (18, 14), 15, (255, 236, 105)); self.game.text(surface, "GLIWICE // CITY PROGRESS", (20, 31), 6, (0, 222, 218))
+        # Route markers: completed streets glow cyan, current is yellow, locked is pink.
+        route = ((154, 94), (190, 82), (225, 92), (126, 122), (92, 143)); current = self.game.overworld.location_index
+        for index, point in enumerate(route):
+            color = (0, 255, 210) if index < current else (255, 236, 105) if index == current else (255, 37, 116)
+            pygame.draw.circle(surface, color, point, 5 if index == current else 3); pygame.draw.circle(surface, (10, 8, 23), point, 2)
+            if index < len(self.game.overworld.location_names): self.game.text(surface, self.game.overworld.location_names[index], (point[0] + 6, point[1] - 3), 5, color)
+        progress = min(100, int(current / max(1, len(route) - 1) * 100))
+        pygame.draw.rect(surface, (10, 8, 23), (18, 143, 122, 19)); pygame.draw.rect(surface, (0, 222, 218), (22, 156, int(114 * progress / 100), 3)); self.game.text(surface, f"DISTRICTS {current}/{len(route)-1}", (22, 146), 6, COLORS["paper"])
+        self.game.text(surface, f"COINS {self.game.player.coins}   XP {self.game.player.xp}", (185, 146), 6, COLORS["paper"])
+        if self.controls:
+            pygame.draw.rect(surface, (11, 8, 23), (37, 93, 165, 52)); pygame.draw.rect(surface, (0, 222, 218), (37, 93, 165, 52), 1)
+            self.game.text(surface, "CONTROLS", (83, 99), 9, (255, 236, 105)); self.game.text(surface, "WASD  MOVE", (52, 115), 7, COLORS["paper"]); self.game.text(surface, "J/K  HIT   L  SPECIAL", (52, 127), 7, COLORS["paper"]); self.game.text(surface, "ENTER / ESC  BACK", (52, 139), 7, COLORS["paper"])
+        else:
+            for i, label in enumerate(("START CLEANUP", "CONTROLS")):
+                color = (255, 37, 116) if i == self.selected else (87, 76, 111)
+                pygame.draw.rect(surface, color, (62, 100 + i * 19, 118, 14), 1); self.game.text(surface, label, (78, 103 + i * 19), 7, (255, 236, 105) if i == self.selected else COLORS["paper"])
+        self.game.text(surface, "ENTER SELECT   UP/DOWN CHOOSE", (78, 171), 6, (255, 178, 71))
 
 class QuestBoardState:
     def __init__(self, game): self.game = game
@@ -47,7 +102,7 @@ class GameOverState:
 
 class Game:
     def __init__(self):
-        pygame.init(); pygame.display.set_caption(TITLE); self.window = pygame.display.set_mode((WIDTH*WINDOW_SCALE, HEIGHT*WINDOW_SCALE)); self.canvas = pygame.Surface((WIDTH, HEIGHT)); self.fonts = {}; self.player = self.load_player(); self.manager = StateManager(self); self.overworld = OverworldState(self); self.manager.add("MENU", MenuState(self)); self.manager.add("OVERWORLD", self.overworld); self.manager.add("QUEST_BOARD", QuestBoardState(self)); self.manager.add("GAME_OVER", GameOverState(self))
+        pygame.init(); pygame.display.set_caption(TITLE); self.window = pygame.display.set_mode((WIDTH*WINDOW_SCALE, HEIGHT*WINDOW_SCALE)); self.canvas = pygame.Surface((WIDTH, HEIGHT)); self.fonts = {}; self.player = self.load_player(); self.manager = StateManager(self); self.overworld = OverworldState(self); self.manager.add("INTRO", IntroState(self)); self.manager.add("MENU", MenuState(self)); self.manager.add("OVERWORLD", self.overworld); self.manager.add("QUEST_BOARD", QuestBoardState(self)); self.manager.add("GAME_OVER", GameOverState(self)); self.manager.change("INTRO")
     def text(self, surface, value, pos, size, color):
         if size not in self.fonts: self.fonts[size] = pygame.font.Font(None, size*2)
         surface.blit(self.fonts[size].render(value, False, color), pos)
