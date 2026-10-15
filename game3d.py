@@ -54,13 +54,16 @@ class GreenEye3D:
         except (OSError, ValueError, TypeError): return PlayerData()
     def save(self): SAVE_PATH.write_text(json.dumps(self.player_data.to_dict(), indent=2))
     def create_ui(self):
+        # Ursina can use a white clear color on some Wayland/OpenGL setups;
+        # keep an explicit UI backdrop behind every screen.
+        self.backdrop = Entity(parent=camera.ui, model="quad", color=NIGHT, scale=(2, 2), z=1)
         self.title = Text("GREEN-EYE", origin=(0, 0), scale=.08, color=NEON_YELLOW, enabled=False)
         self.subtitle = Text("GLIWICE // NIGHT CLEANUP", origin=(0, 0), scale=.035, color=NEON_CYAN, enabled=False)
         self.hud = Text("", position=(-.86, .45), scale=.025, color=NEON_YELLOW, enabled=False)
         self.help = Text("", position=(-.86, -.46), scale=.022, color=color.white, enabled=False)
         self.message = Text("", origin=(0, 0), y=-.2, scale=.04, color=NEON_PINK, enabled=False)
-        self.map_panel = Entity(parent=camera.ui, model="quad", texture=MAP_TEXTURE, scale=(1.72, 1), color=color.rgba(255,255,255,190), enabled=False)
-        self.menu_card = Entity(parent=camera.ui, model="quad", color=color.rgba(8,6,18,220), scale=(.64,.86), enabled=False)
+        self.map_panel = Entity(parent=camera.ui, model="quad", texture=MAP_TEXTURE, scale=(1.72, 1), color=color.rgba(255,255,255,190), z=.5, enabled=False)
+        self.menu_card = Entity(parent=camera.ui, model="quad", color=color.rgba(8,6,18,220), scale=(.64,.86), z=.2, enabled=False)
         self.start_text = Text("START CLEANUP", parent=camera.ui, origin=(0,0), y=-.05, scale=.045, color=NEON_YELLOW, enabled=False)
         self.controls_text = Text("CONTROLS", parent=camera.ui, origin=(0,0), y=-.15, scale=.038, color=color.white, enabled=False)
         self.menu_prompt = Text("ENTER / CLICK  TO START 3D CITY", parent=camera.ui, origin=(0,0), y=-.38, scale=.028, color=NEON_PINK, enabled=False)
