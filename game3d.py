@@ -1076,8 +1076,14 @@ class HybridGame:
         self.update_visual_animations(dt, actor)
 
     def input(self, key):
-        if key in self.konami_sequence:
-            self.konami_buffer.append(key)
+        # Ursina reports arrow keys as "up arrow" etc.; accept both the
+        # short names and the actual event names from the keyboard backend.
+        konami_key = {
+            "up arrow": "up", "down arrow": "down",
+            "left arrow": "left", "right arrow": "right",
+        }.get(key, key.lower() if isinstance(key, str) else key)
+        if konami_key in self.konami_sequence:
+            self.konami_buffer.append(konami_key)
             self.konami_buffer = self.konami_buffer[-len(self.konami_sequence):]
             if tuple(self.konami_buffer) == self.konami_sequence:
                 self.konami_buffer.clear()
