@@ -83,17 +83,17 @@ class HybridGame:
         self.enemies.clear()
         # Continuous grass base and asphalt underlays keep the city readable even
         # where individual road-kit meshes have small tile gaps.
-        self.add(Entity(model="cube", position=(0, -.35, 0), scale=(70, .5, 55), color=color.rgb(42, 112, 58)))
-        self.add(Entity(model="cube", position=(0, -.06, 0), scale=(66, .12, 8.2), color=color.rgb(48, 51, 61)))
-        self.add(Entity(model="cube", position=(0, -.05, 0), scale=(8.2, .12, 52), color=color.rgb(48, 51, 61)))
+        self.add(Entity(model="cube", position=(0, -.35, 0), scale=(70, .5, 55), color=color.rgb(42, 112, 58), shader=unlit_shader))
+        self.add(Entity(model="cube", position=(0, -.06, 0), scale=(66, .12, 8.2), color=color.rgb(48, 51, 61), shader=unlit_shader))
+        self.add(Entity(model="cube", position=(0, -.05, 0), scale=(8.2, .12, 52), color=color.rgb(48, 51, 61), shader=unlit_shader))
         # Real road GLBs, not flat Python rectangles.
         for x in range(-24, 25, 4): self.add(Entity(model=road("road-straight"), position=(x, .03, 0), scale=2.2))
         for z in range(-20, 21, 4): self.add(Entity(model=road("road-straight"), position=(0, .04, z), rotation_y=90, scale=2.2))
         self.add(Entity(model=road("road-crossroad"), position=(0, .06, 0), scale=2.3))
         # Long, unbroken lane/curb lines instead of isolated decorative dashes.
         line = color.rgb(238, 209, 92)
-        for z in (-3.7, 3.7): self.add(Entity(model="cube", position=(0, .16, z), scale=(64, .035, .09), color=line))
-        for x in (-3.7, 3.7): self.add(Entity(model="cube", position=(x, .17, 0), scale=(.09, .035, 50), color=line))
+        for z in (-3.7, 3.7): self.add(Entity(model="cube", position=(0, .16, z), scale=(64, .035, .09), color=line, shader=unlit_shader))
+        for x in (-3.7, 3.7): self.add(Entity(model="cube", position=(x, .17, 0), scale=(.09, .035, 50), color=line, shader=unlit_shader))
         houses = [("building-type-a", (-16, 5), 2.4), ("building-type-c", (-9, 5), 2.3), ("building-type-f", (9, 5), 2.4), ("building-type-h", (16, 5), 2.2), ("building-type-k", (-15, -8), 2.4), ("building-type-m", (9, -8), 2.3), ("building-type-r", (16, -8), 2.3)]
         for name, pos, size in houses: self.add(Entity(model=city(name), position=(pos[0], 0, pos[1]), scale=size, collider="box"))
         for name, pos, size in (("tree-large", (-5, 0, 8), 1.5), ("tree-small", (12, 0, 2), 1.4), ("planter", (5, 0, 7), 1.5)):
@@ -231,8 +231,8 @@ def create_app():
     app = Ursina(borderless=False, development_mode=False)
     window.title = "Green-Eye // Gliwice 3D Streets"; window.color = NIGHT; scene.fog_color = NIGHT
     Sky(color=color.rgb(16, 20, 35))
-    AmbientLight(color=color.rgba(190, 190, 190, 1))
-    DirectionalLight(rotation=(45, -45, 45), color=color.rgba(220, 220, 220, 1))
+    AmbientLight(color=color.rgba(110, 110, 110, 1))
+    DirectionalLight(rotation=(45, -45, 45), color=color.rgba(150, 150, 150, 1))
     game = HybridGame(); game.run()
 
 
