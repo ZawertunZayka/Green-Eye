@@ -254,7 +254,7 @@ class HybridGame:
         self.building_bounds.append((low.x, high.x, low.z, high.z))
         return entity
 
-    def blocked(self, position, radius, ignore=None):
+    def blocked(self, position, radius, ignore=None, block_vehicles=True):
         if abs(position.x) > 28 - radius or abs(position.z) > 22 - radius:
             return True
         if self.street < 2 and not all(enemy["dead"] for enemy in self.enemies) and position.x + radius > 21:
@@ -266,21 +266,22 @@ class HybridGame:
                 return True
         # Vehicles are solid while driving and on foot.  Use a simple radial
         # test here because imported GLB collider meshes are inconsistent.
-        for vehicle in [getattr(self, "car_entity", None), *self.traffic]:
-            if vehicle is None or vehicle is ignore or not vehicle.enabled:
-                continue
-            if distance(Vec3(position.x, 0, position.z), Vec3(vehicle.x, 0, vehicle.z)) < radius + 1.65:
-                return True
+        if block_vehicles:
+            for vehicle in [getattr(self, "car_entity", None), *self.traffic]:
+                if vehicle is None or vehicle is ignore or not vehicle.enabled:
+                    continue
+                if distance(Vec3(position.x, 0, position.z), Vec3(vehicle.x, 0, vehicle.z)) < radius + 1.65:
+                    return True
         return False
 
-    def move_actor(self, actor, movement, radius):
+    def move_actor(self, actor, movement, radius, block_vehicles=True):
         # Small axis-separated steps prevent tunnelling and allow wall sliding.
         steps = max(1, math.ceil(movement.length() / .15))
         step = movement / steps
         for _ in range(steps):
             for offset in (Vec3(step.x, 0, 0), Vec3(0, 0, step.z)):
                 candidate = actor.position + offset
-                if not self.blocked(candidate, radius, actor):
+                if not self.blocked(candidate, radius, actor, block_vehicles):
                     actor.position = candidate
 
     def spawn_player(self, car_position=(-7, .5, 0)):
@@ -1008,7 +1009,9 @@ class HybridGame:
             if abs(self.car_speed) > .08:
                 self.car_entity.rotation_y += steer * 92 * dt * clamp(abs(self.car_speed) / 5.0, .2, 1.5)
                 before = Vec3(self.car_entity.position)
-                self.move_actor(self.car_entity, self.car_entity.forward * self.car_speed * dt, 1.9)
+                # Cars must be allowed to touch traffic; the collision solver
+                # below then applies the visible knockback impulse.
+                self.move_actor(self.car_entity, self.car_entity.forward * self.car_speed * dt, 1.9, block_vehicles=False)
                 if distance(before, self.car_entity.position) < abs(self.car_speed * dt) * .35:
                     self.car_speed *= -.25
             self.car_entity.x = clamp(self.car_entity.x, -28, 28); self.car_entity.z = clamp(self.car_entity.z, -22, 22)
