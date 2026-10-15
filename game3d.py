@@ -101,6 +101,8 @@ class HybridGame:
         self.car_collision_cooldown = 0.0
         self.animation_time = 0.0
         self.camera_shake = 0.0
+        self.ending_time = 0.0
+        self.ending_confetti: list[Entity] = []
         self.konami_sequence = ("up", "up", "down", "down", "left", "right", "left", "right", "b", "a")
         self.konami_buffer: list[str] = []
         self.rgb_mode = False
@@ -191,6 +193,10 @@ class HybridGame:
         self.shop_text = Text("", parent=camera.ui, origin=(0, 0), y=.03, z=-.1, scale=1, color=CYAN, enabled=False)
         self.win_panel = Entity(parent=camera.ui, model="quad", color=color.rgba32(8, 6, 18, 250), scale=(.72, .62), enabled=False)
         self.win_text = Text("", parent=camera.ui, origin=(0, 0), y=.04, z=-.1, scale=1, color=YELLOW, enabled=False)
+        self.ending_bg = Entity(parent=camera.ui, model="quad", scale=(2, 1), color=color.rgba32(5, 8, 20, 190), enabled=False)
+        self.ending_title = Text("GLIWICE", parent=camera.ui, origin=(0, 0), y=.10, z=-.2, scale=2.5, color=CYAN, enabled=False)
+        self.ending_subtitle = Text("", parent=camera.ui, origin=(0, 0), y=-.10, z=-.2, scale=1.15, color=YELLOW, enabled=False)
+        self.ending_hint = Text("ENTER  PLAY AGAIN", parent=camera.ui, origin=(0, 0), y=-.36, z=-.2, scale=.75, color=color.white, enabled=False)
         self.upgrade_overlay = Entity(parent=camera.ui, model="quad", scale=(2, 1), color=color.rgba32(5, 7, 15, 220), enabled=False)
         self.upgrade_title = Text("CHOOSE A CLEANUP BONUS", parent=camera.ui, origin=(0, 0), y=.32,
                                   z=-.2, scale=1.25, color=YELLOW, enabled=False)
@@ -919,6 +925,9 @@ class HybridGame:
         self.refresh_prompt()
 
     def hide_ui(self):
+        for piece in self.ending_confetti:
+            destroy(piece)
+        self.ending_confetti.clear()
         for item in (self.intro_top_bar, self.intro_bottom_bar, self.intro, self.intro_skip,
                      self.map_panel, self.menu_card, self.menu,
                      self.hud_bg, self.hud, self.help_bg, self.help,
@@ -927,7 +936,8 @@ class HybridGame:
                      self.hp_bg, self.hp_fill, self.hp_text, self.hotbar, self.minimap,
                      self.upgrade_overlay, self.upgrade_title, *self.upgrade_cards,
                      self.fight_banner, self.quest_panel, self.quest_text,
-                     self.shop_panel, self.shop_text, self.win_panel, self.win_text):
+                     self.shop_panel, self.shop_text, self.win_panel, self.win_text,
+                     self.ending_bg, self.ending_title, self.ending_subtitle, self.ending_hint):
             item.enabled = False
 
     def interaction(self) -> str:
@@ -968,13 +978,44 @@ class HybridGame:
 
     def win_game(self):
         self.hide_ui()
-        self.state = "WIN"
+        self.state = "ENDING"
+        self.ending_time = 0.0
+        for piece in self.ending_confetti:
+            destroy(piece)
+        self.ending_confetti.clear()
+        for _ in range(42):
+            piece = Entity(parent=camera.ui, model="quad",
+                           position=(random.uniform(-.95, .95), random.uniform(.45, .9), -.25),
+                           scale=(random.uniform(.012, .028), random.uniform(.025, .06)),
+                           rotation_z=random.uniform(0, 360),
+                           color=random.choice((CYAN, PINK, YELLOW, color.orange, color.lime)))
+            piece.fall_speed = random.uniform(.12, .28)
+            piece.drift = random.uniform(-.16, .16)
+            self.ending_confetti.append(piece)
         self.hud_bg.enabled = False; self.help_bg.enabled = False; self.notice_bg.enabled = False
         self.hud.enabled = False; self.help.enabled = False; self.notice.enabled = False; self.objective_bg.enabled = False; self.objective.enabled = False
         self.fight_banner.enabled = False
-        self.win_panel.enabled = True; self.win_text.enabled = True
-        self.win_text.color = YELLOW
-        self.win_text.text = "THE PRINCIPAL IS DEFEATED!\n\nGliwice can breathe again.\nEverything is tidy.\n\nCOINS %d   XP %d\n\nENTER  PLAY AGAIN" % (self.coins, self.xp)
+        self.ending_bg.enabled = self.ending_title.enabled = self.ending_subtitle.enabled = True
+        self.ending_hint.enabled = False
+        self.ending_subtitle.text = "ALL TIDY NOW!\nGliwice is safe again."
+
+    def update_ending(self, dt: float) -> None:
+        self.ending_time += dt
+        self.ending_title.scale = 2.5 + math.sin(self.ending_time * 3.0) * .12
+        self.ending_title.color = color.rgb32(
+            int(128 + 127 * math.sin(self.ending_time * 2.0)),
+            int(128 + 127 * math.sin(self.ending_time * 2.0 + 2.1)),
+            int(128 + 127 * math.sin(self.ending_time * 2.0 + 4.2)),
+        )
+        for piece in self.ending_confetti:
+            piece.y -= piece.fall_speed * dt
+            piece.x += math.sin(self.ending_time * 2.0 + piece.y * 10) * piece.drift * dt
+            piece.rotation_z += 120 * dt
+            if piece.y < -.58:
+                piece.y = random.uniform(.48, .85)
+                piece.x = random.uniform(-.95, .95)
+        if self.ending_time > 2.0:
+            self.ending_hint.enabled = True
 
     def open_quest(self):
         self.hide_ui()
@@ -1006,6 +1047,9 @@ class HybridGame:
         dt = max(0.0, min(dt, .05))
         if self.state == "INTRO":
             self.update_intro(dt)
+            return
+        if self.state == "ENDING":
+            self.update_ending(dt)
             return
         if self.state != "PLAY": return
         self.update_rgb_player()
@@ -1191,6 +1235,14 @@ class HybridGame:
                 self.move_multiplier = 1.0; self.attack_delay = .28; self.damage_multiplier = 1.0
                 self.build_street(); self.start()
             elif key == "escape": self.show_menu()
+        elif self.state == "ENDING":
+            if key == "enter":
+                self.street = 0
+                self.max_hp = 100; self.player_hp = 100; self.damage_bonus = 0
+                self.move_multiplier = 1.0; self.attack_delay = .28; self.damage_multiplier = 1.0
+                self.build_street(); self.start()
+            elif key == "escape":
+                self.show_menu()
         elif self.state == "GAME_OVER":
             if key == "enter":
                 self.player_hp = self.max_hp
