@@ -8,4 +8,6 @@ The supplied GegX Free Walk Pixel Pack is used in assets/user/walk/ for animated
 
 The Gliwice map image in assets/user/city/gliwice_map.png was supplied by the user and is used as the menu progress-map background.
 
+The 3D runtime uses the open-source Ursina engine and Panda3D runtime, declared in requirements.txt.
+
 If external assets are added later, record their name, author, source URL, and license here. Only CC0 or CC-BY assets are acceptable.
