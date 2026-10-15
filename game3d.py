@@ -61,6 +61,11 @@ class HybridGame:
         ("armor", "THICK APRON", "Take 15% less damage"),
         ("heal", "WARM SOUP", "Restore 35 HP now"),
     )
+    WEAPONS = (
+        {"id": "pan", "name": "CLEANUP PAN", "price": 0, "damage": 1, "cooldown": .28, "speed": 15, "color": YELLOW},
+        {"id": "pin", "name": "ROLLING PIN", "price": 45, "damage": 2, "cooldown": .38, "speed": 18, "color": color.orange},
+        {"id": "soup", "name": "SOUP BLASTER", "price": 75, "damage": 3, "cooldown": .52, "speed": 20, "color": CYAN},
+    )
     STORY = (
         "A cleanup call arrives. Clear the street and follow the road east.",
         "A dropped note points farther east: ZSTI. Someone is waiting there.",
@@ -84,6 +89,8 @@ class HybridGame:
         self.intro_time = 0.0
         self.street = 0
         self.weapon_level = 0
+        self.unlocked_weapons = {"pan"}
+        self.equipped_weapon = "pan"
         self.coins, self.xp = self.load_progress()
         self.scene_entities: list[Entity] = []
         self.building_bounds: list[tuple[float, float, float, float]] = []
@@ -120,6 +127,12 @@ class HybridGame:
             if not isinstance(data, dict):
                 return 0, 0
             self.weapon_level = max(0, min(3, int(data.get("weapon_level", 0))))
+            saved_weapons = data.get("unlocked_weapons", ["pan"])
+            if isinstance(saved_weapons, list):
+                valid_ids = {weapon["id"] for weapon in self.WEAPONS}
+                self.unlocked_weapons = {weapon for weapon in saved_weapons if weapon in valid_ids} | {"pan"}
+            equipped = data.get("equipped_weapon", "pan")
+            self.equipped_weapon = equipped if equipped in self.unlocked_weapons else "pan"
             return int(data.get("coins", 0)), int(data.get("xp", 0))
         except (OSError, ValueError, TypeError):
             return 0, 0
@@ -132,7 +145,8 @@ class HybridGame:
                 data = previous
         except (OSError, ValueError):
             pass
-        data.update(coins=self.coins, xp=self.xp, weapon_level=self.weapon_level)
+        data.update(coins=self.coins, xp=self.xp, weapon_level=self.weapon_level,
+                    unlocked_weapons=sorted(self.unlocked_weapons), equipped_weapon=self.equipped_weapon)
         temporary = SAVE.with_suffix(".tmp")
         temporary.write_text(json.dumps(data, indent=2))
         temporary.replace(SAVE)
@@ -184,6 +198,8 @@ class HybridGame:
                               scale=(.24, .015), color=PINK, enabled=False)
         self.hp_text = Text("HP 100 / 100", parent=camera.ui, position=(-.465, .455), scale=.58,
                             color=color.white, enabled=False)
+        self.inventory_text = Text("", parent=camera.ui, position=(-.465, .375), scale=.48,
+                                   color=YELLOW, enabled=False)
         self.minimap = Entity(parent=camera.ui, model="quad", position=(.405, .33), scale=(.19, .24),
                               color=color.rgba32(8, 12, 24, 225), enabled=False)
         Entity(parent=self.minimap, model="quad", scale=(.94, .17), color=color.rgb32(62, 66, 78), z=-.02)
@@ -324,6 +340,29 @@ class HybridGame:
         self.hp_fill.color = PINK if ratio > .3 else color.red
         self.hp_text.text = f"HP {max(0, self.player_hp)} / {self.max_hp}"
 
+    def weapon(self):
+        return next(weapon for weapon in self.WEAPONS if weapon["id"] == self.equipped_weapon)
+
+    def refresh_inventory(self):
+        slots = []
+        for index, weapon in enumerate(self.WEAPONS, start=1):
+            label = weapon["name"] if weapon["id"] in self.unlocked_weapons else "LOCKED"
+            prefix = ">" if weapon["id"] == self.equipped_weapon else " "
+            slots.append(f"{prefix}{index} {label}")
+        self.inventory_text.text = "\n".join(slots)
+
+    def equip_weapon(self, index):
+        if not 0 <= index < len(self.WEAPONS):
+            return
+        weapon = self.WEAPONS[index]
+        if weapon["id"] not in self.unlocked_weapons:
+            self.notice.text = "BUY THIS WEAPON AT THE SHOP"
+            return
+        self.equipped_weapon = weapon["id"]
+        self.save()
+        self.refresh_inventory()
+        self.notice.text = f"EQUIPPED: {weapon['name']}"
+
     def refresh_minimap(self):
         while len(self.minimap_enemy_dots) < len(self.enemies):
             self.minimap_enemy_dots.append(Entity(parent=self.minimap, model="circle", scale=.065, color=PINK, z=-.05))
@@ -443,12 +482,12 @@ class HybridGame:
         alive = [enemy for enemy in self.enemies if not enemy["dead"]]
         return min(alive, key=lambda enemy: distance(self.avatar, enemy["entity"]), default=None)
 
-    def damage_enemy(self, target: dict) -> None:
+    def damage_enemy(self, target: dict, base_damage: int = 1) -> None:
         """Apply one hit after a cleanup projectile reaches its target."""
         entity = target["entity"]
         if target["dead"]:
             return
-        target["hp"] -= 1 + self.weapon_level + self.damage_bonus
+        target["hp"] -= base_damage + self.weapon_level + self.damage_bonus
         direction = entity.position - self.avatar.position
         direction.y = 0
         if direction.length():
@@ -505,9 +544,12 @@ class HybridGame:
         if not direction.length():
             direction = self.avatar.forward
         direction = direction.normalized()
-        shot = Entity(model="sphere", position=start, scale=.22, color=YELLOW, shader=unlit_shader)
+        weapon = self.weapon()
+        shot = Entity(model="sphere", position=start, scale=.22 + weapon["damage"] * .025,
+                      color=weapon["color"], shader=unlit_shader)
         target = self.locked_enemy if self.locked_enemy and not self.locked_enemy["dead"] else None
-        self.projectiles.append({"entity": shot, "velocity": direction * 15, "target": target, "life": 1.0})
+        self.projectiles.append({"entity": shot, "velocity": direction * weapon["speed"], "target": target,
+                                 "damage": weapon["damage"], "life": 1.0})
 
     def update_projectiles(self, dt: float) -> None:
         for shot in self.projectiles[:]:
@@ -526,7 +568,7 @@ class HybridGame:
                 if direction.length():
                     shot["velocity"] = direction.normalized() * 15
                 if direction.length() <= .75 + shot["velocity"].length() * dt:
-                    self.damage_enemy(target)
+                    self.damage_enemy(target, shot["damage"])
                     self.projectiles.remove(shot)
                     destroy(projectile)
                     continue
@@ -676,8 +718,10 @@ class HybridGame:
         for item in (self.intro, self.map_panel, self.menu_card, self.menu, self.quest_panel, self.quest_text, self.shop_panel, self.shop_text, self.win_panel, self.win_text): item.enabled = False
         self.fight_banner.enabled = False
         self.hp_bg.enabled = self.hp_fill.enabled = self.hp_text.enabled = True
+        self.inventory_text.enabled = True
         self.minimap.enabled = True
         self.refresh_player_hud()
+        self.refresh_inventory()
         self.refresh_minimap()
         self.refresh_boss_bar()
         if self.story_queue:
@@ -690,7 +734,7 @@ class HybridGame:
                      self.hud_bg, self.hud, self.help_bg, self.help,
                      self.objective_bg, self.objective, self.notice_bg, self.notice,
                      self.story_bg, self.story_text, self.boss_bar_bg, self.boss_bar_fill, self.boss_name,
-                     self.hp_bg, self.hp_fill, self.hp_text, self.minimap,
+                     self.hp_bg, self.hp_fill, self.hp_text, self.inventory_text, self.minimap,
                      self.upgrade_overlay, self.upgrade_title, *self.upgrade_cards,
                      self.fight_banner, self.quest_panel, self.quest_text,
                      self.shop_panel, self.shop_text, self.win_panel, self.win_text):
@@ -756,8 +800,17 @@ class HybridGame:
         self.hide_ui()
         self.state = "SHOP"
         self.shop_panel.enabled = True; self.shop_text.enabled = True; self.hud_bg.enabled = False; self.help_bg.enabled = False; self.notice_bg.enabled = False; self.hud.enabled = False; self.help.enabled = False; self.objective_bg.enabled = False; self.objective.enabled = False
-        offer = "Maximum upgrade reached" if self.weapon_level == 3 else "P  Upgrade damage - 30 coins"
-        self.shop_text.text = f"SHOP\n\nDamage: {1 + self.weapon_level + self.damage_bonus}\nCoins: {self.coins}\n\n{offer}\n\nE / Esc  Close"
+        weapon_lines = []
+        for index, weapon in enumerate(self.WEAPONS, start=1):
+            if weapon["id"] in self.unlocked_weapons:
+                status = "OWNED"
+            elif weapon["price"] <= self.coins:
+                status = f"BUY {weapon['price']}"
+            else:
+                status = f"{weapon['price']} COINS"
+            weapon_lines.append(f"{index}. {weapon['name']}  DMG {weapon['damage']}  {status}")
+        offer = "P  Upgrade pan damage - 30 coins" if self.weapon_level < 3 else "Pan upgrade: maximum"
+        self.shop_text.text = f"WEAPON SHOP\n\nCoins: {self.coins}\n\n" + "\n".join(weapon_lines) + f"\n\n{offer}\n\n1-3 Buy weapon   E / Esc Close"
 
     def update(self, dt):
         dt = max(0.0, min(dt, .05))
@@ -836,13 +889,15 @@ class HybridGame:
                     self.notice.text = "E EXIT CAR TO START A CLEANUP FIGHT"
                     return
                 if self.attack_cooldown > 0: return
-                self.attack_cooldown = self.attack_delay
+                self.attack_cooldown = self.weapon()["cooldown"] * self.attack_delay / .28
                 aim_point = self.locked_enemy["entity"].position if self.locked_enemy and not self.locked_enemy["dead"] else self.get_mouse_aim_point()
                 aim = aim_point - self.avatar.position
                 aim.y = 0
                 if aim.length():
                     self.avatar.rotation_y = math.degrees(math.atan2(aim.x, aim.z))
                 self.spawn_projectile(aim_point)
+            elif key in ("1", "2", "3"):
+                self.equip_weapon(int(key) - 1)
             elif key == "e" and distance(self.avatar if not self.in_car else self.car_entity, self.shop) < 4: self.open_shop()
             elif key == "e" and distance(self.avatar if not self.in_car else self.car_entity, self.board) < 4: self.open_quest()
             elif key == "e" and self.in_car and self.car_entity.x > 20 and all(e["dead"] for e in self.enemies):
@@ -874,6 +929,20 @@ class HybridGame:
             if key in ("e", "escape"): self.start()
         elif self.state == "SHOP":
             if key in ("e", "escape"): self.start()
+            elif key in ("1", "2", "3"):
+                weapon = self.WEAPONS[int(key) - 1]
+                if weapon["id"] in self.unlocked_weapons:
+                    self.equipped_weapon = weapon["id"]
+                    self.save()
+                    self.open_shop()
+                elif self.coins >= weapon["price"]:
+                    self.coins -= weapon["price"]
+                    self.unlocked_weapons.add(weapon["id"])
+                    self.equipped_weapon = weapon["id"]
+                    self.save()
+                    self.open_shop()
+                else:
+                    self.shop_text.text += "\n\nNot enough coins"
             elif key == "p":
                 if self.coins >= 30 and self.weapon_level < 3:
                     self.coins -= 30
