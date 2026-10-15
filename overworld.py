@@ -42,7 +42,7 @@ class OverworldState:
             return
         if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
             if self.pos.distance_to((58, 35)) < 30: self.game.manager.change("QUEST_BOARD")
-            elif self.pos.distance_to((104, 35)) < 20: self.game.manager.change("SHOP")
+            elif self.pos.distance_to((135, 37)) < 22: self.game.manager.change("SHOP")
             elif self.all_clear and self.pos.x > 265 and 78 < self.pos.y < 120: self.next_location()
     @property
     def all_clear(self) -> bool:
@@ -124,10 +124,11 @@ class OverworldState:
             prop = load_image(name, (30, 30))
             if prop: surface.blit(prop, pos)
         pygame.draw.rect(surface, (255, 37, 116), (44, 25, 30, 18)); pygame.draw.rect(surface, (12, 9, 24), (48, 29, 22, 10)); self.label(surface, "CLEANUP HQ", (47, 32), (255, 236, 105))
-        pygame.draw.rect(surface, (0, 222, 218), (84, 18, 43, 27), 1)
-        shop_prop = load_image("city/building-wide-a.png", (42, 38))
-        if shop_prop: surface.blit(shop_prop, (84, 8))
-        pygame.draw.rect(surface, (0, 222, 218), (91, 25, 27, 18)); pygame.draw.rect(surface, (12, 9, 24), (95, 29, 19, 10)); self.label(surface, "SHOP", (98, 32), (255, 236, 105))
+        # Dedicated shop block: separated from the HUD and market labels.
+        pygame.draw.rect(surface, (5, 4, 18), (116, 23, 40, 29)); pygame.draw.rect(surface, (0, 222, 218), (116, 23, 40, 29), 1)
+        shop_prop = load_image("city/building-wide-a.png", (38, 32))
+        if shop_prop: surface.blit(shop_prop, (118, 24))
+        pygame.draw.rect(surface, (255, 236, 105), (117, 39, 38, 13)); pygame.draw.rect(surface, (5, 4, 18), (119, 41, 34, 9)); self.game.text(surface, "SHOP", (126, 41), 7, (0, 222, 218))
         name_index = self.location_index % len(self.location_names)
         self.game.text(surface, f"GLIWICE // {self.location_names[name_index]}", (8, 6), 8, (0, 222, 218))
         self.game.text(surface, self.location_notes[name_index], (232, 6), 6, (255, 178, 71))
