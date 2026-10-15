@@ -58,6 +58,7 @@ class HybridGame:
         self.scene_entities: list[Entity] = []
         self.traffic: list[Entity] = []
         self.enemies: list[dict] = []
+        self.attack_effects: list[Entity] = []
         self.avatar: Entity | None = None
         self.in_car = True
         self.attack_cooldown = 0.0
@@ -96,9 +97,39 @@ class HybridGame:
         self.scene_entities.append(entity)
         return entity
 
+    def show_cleanup_hit(self, target: Entity | None) -> None:
+        """Show a short, readable cleanup beam instead of an invisible hit."""
+        if not self.avatar:
+            return
+        start = self.avatar.position + Vec3(0, 1.1, 0)
+        end = target.position + Vec3(0, 1.0, 0) if target else start + self.avatar.forward * 2.5
+        beam = Entity(
+            model="cube",
+            position=(start + end) / 2,
+            scale=(.12, .12, max(.2, distance(start, end))),
+            color=YELLOW,
+            shader=unlit_shader,
+            billboard=False,
+        )
+        beam.look_at(end)
+        self.attack_effects.append(beam)
+        invoke(self.remove_attack_effect, beam, delay=.12)
+        if target:
+            flash = Entity(model="quad", position=end, scale=1.0, color=color.rgba32(255, 246, 120, 230), billboard=True, double_sided=True)
+            self.attack_effects.append(flash)
+            invoke(self.remove_attack_effect, flash, delay=.16)
+
+    def remove_attack_effect(self, effect: Entity) -> None:
+        if effect in self.attack_effects:
+            self.attack_effects.remove(effect)
+        destroy(effect)
+
     def build_street(self):
         for entity in self.scene_entities + self.traffic:
             destroy(entity)
+        for effect in self.attack_effects:
+            destroy(effect)
+        self.attack_effects.clear()
         for enemy in self.enemies:
             destroy(enemy["entity"])
         self.scene_entities.clear(); self.traffic.clear()
@@ -219,6 +250,7 @@ class HybridGame:
                 self.avatar.animate_rotation_y(self.avatar.rotation_y + 18, duration=.08)
                 target = min((e for e in self.enemies if not e["dead"]), key=lambda e: distance(self.avatar, e["entity"]), default=None)
                 if target and distance(self.avatar, target["entity"]) < 3.2:
+                    self.show_cleanup_hit(target["entity"])
                     target["hp"] -= 1; self.notice.text = "PAN BONK!"
                     direction = target["entity"].position - self.avatar.position; direction.y = 0
                     if direction.length(): target["entity"].animate_position(target["entity"].position + direction.normalized() * 1.3, duration=.12)
@@ -226,6 +258,9 @@ class HybridGame:
                     invoke(target["entity"].animate_color, target["tint"], delay=.10, duration=.12)
                     if target["hp"] <= 0:
                         target["dead"] = True; target["entity"].animate_rotation_z(180, duration=.18); target["entity"].animate_scale(0, duration=.2); self.coins += 5; self.xp += 10; self.save()
+                else:
+                    self.show_cleanup_hit(None)
+                    self.notice.text = "NO TARGET IN RANGE"
             elif key == "e" and distance(self.avatar if not self.in_car else self.car_entity, self.shop) < 4: self.open_shop()
             elif key == "e" and distance(self.avatar if not self.in_car else self.car_entity, self.board) < 4: self.open_quest()
             elif key == "e" and self.in_car and self.car_entity.x > 20 and all(e["dead"] for e in self.enemies):
