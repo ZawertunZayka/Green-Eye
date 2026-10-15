@@ -4,10 +4,10 @@
 
 <video controls width="720" preload="metadata">
   <source src="assets/user/media/gameplay-video.mp4" type="video/mp4">
-  Your browser does not support embedded video. [Open the gameplay video directly](assets/user/media/gameplay-video.mp4).
+  Your browser does not support embedded video. [Open the gameplay video directly](https://github.com/ZawertunZayka/Green-Eye/blob/main/assets/user/media/gameplay-video.mp4).
 </video>
 
-[▶ Watch the gameplay recording](assets/user/media/gameplay-video.mp4)
+[▶ Open the gameplay video in GitHub](https://github.com/ZawertunZayka/Green-Eye/blob/main/assets/user/media/gameplay-video.mp4)
 
 ![Gliwice map](assets/user/city/gliwice_map.png)
 
