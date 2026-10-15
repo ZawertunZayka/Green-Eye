@@ -6,11 +6,13 @@ from ursina import *
 
 ROOT = Path(__file__).parent
 SAVE_PATH = ROOT / "save.json"
-MAP_TEXTURE = str(ROOT / "assets/user/city/gliwice_map.png")
-RUNNER_TEXTURE = str(ROOT / "assets/user/walk/runner/south/00.png")
-THUG_TEXTURE = str(ROOT / "assets/user/walk/bruiser/south/00.png")
-TEEN_TEXTURE = str(ROOT / "assets/user/walk/punk/south/00.png")
-DEALER_TEXTURE = str(ROOT / "assets/user/walk/businessman/south/00.png")
+# Ursina resolves asset names relative to the project working directory.
+# Keep these relative so Panda3D also finds them when launched from the repo.
+MAP_TEXTURE = "assets/user/city/gliwice_map.png"
+RUNNER_TEXTURE = "assets/user/walk/runner/south/00.png"
+THUG_TEXTURE = "assets/user/walk/bruiser/south/00.png"
+TEEN_TEXTURE = "assets/user/walk/punk/south/00.png"
+DEALER_TEXTURE = "assets/user/walk/businessman/south/00.png"
 
 NEON_PINK = color.rgb(255, 37, 116)
 NEON_CYAN = color.rgb(0, 222, 218)
@@ -96,7 +98,7 @@ class GreenEye3D:
         if zone == 4: self.add_box((0,1,-8),(9,2,3),color.rgb(85,40,50)); self.add_bus((11,.6,-4),color.orange)
         self.add_box((0,.4,11),(4,.8,2),color.rgb(55,30,70)); self.add_text_label("RYNEK" if zone == 0 else self.locations[zone], (0,1.2,11), NEON_YELLOW)
         self.shop = self.add_box((5,.8,8),(2.4,1.6,2.0),color.rgb(20,100,106)); self.obstacles.append((3.3,6.7,7,9)); self.add_text_label("SHOP  [E]", (5,2.0,8), NEON_CYAN)
-        shop_sprite = Entity(model="quad", texture=str(ROOT / "assets/user/city/building-wide-a.png"), billboard=True, position=(5, 2.0, 8), scale=2.8, double_sided=True); self.entities.append(shop_sprite)
+        shop_sprite = Entity(model="quad", texture="assets/user/city/building-wide-a.png", billboard=True, position=(5, 2.0, 8), scale=2.8, double_sided=True); self.entities.append(shop_sprite)
         self.board = self.add_box((-5,.8,8),(2.8,1.6,1.0),color.rgb(125,35,75)); self.add_text_label("QUEST BOARD  [E]", (-5,2.0,8), NEON_YELLOW)
         self.exit = self.add_box((19,.2,0),(1,.25,3),NEON_PINK); self.add_text_label("NEXT STREET", (17,1,0), NEON_YELLOW)
         self.player = Entity(model="quad", texture=RUNNER_TEXTURE, billboard=True, position=(-8,1.2,0), scale=2.1, collider="box"); self.entities.append(self.player)
