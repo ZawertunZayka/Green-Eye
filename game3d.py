@@ -55,7 +55,7 @@ class HybridGame:
     LEVELS = (
         (("bruiser", (11, 0, -5), PINK, "Warrior", 2), ("punk", (14, 0, 6), CYAN, "Rogue", 2)),
         (("punk", (11, 0, -5), CYAN, "Rogue", 2), ("businessman", (-12, 0, -5), color.orange, "Mage", 2), ("bruiser", (14, 0, 6), PINK, "Warrior", 3)),
-        (("bruiser", (11, 0, -5), PINK, "Warrior", 3), ("punk", (14, 0, 6), CYAN, "Rogue", 3), ("zsti_boss", (7, 0, 2), YELLOW, "Mage", 5)),
+        (("zsti_boss", (12, 0, 0), YELLOW, "Mage", 12),),
     )
     def __init__(self):
         self.state = "INTRO"
@@ -71,6 +71,7 @@ class HybridGame:
         self.projectiles: list[dict] = []
         self.locked_enemy: dict | None = None
         self.lock_marker: Entity | None = None
+        self.east_exit_markers: list[Entity] = []
         self.avatar: Entity | None = None
         self.in_car = True
         self.attack_cooldown = 0.0
@@ -135,6 +136,8 @@ class HybridGame:
     def blocked(self, position, radius):
         if abs(position.x) > 28 - radius or abs(position.z) > 22 - radius:
             return True
+        if self.street < 2 and not all(enemy["dead"] for enemy in self.enemies) and position.x + radius > 21:
+            return True
         for left, right, bottom, top in self.building_bounds:
             x = clamp(position.x, left, right)
             z = clamp(position.z, bottom, top)
@@ -151,6 +154,51 @@ class HybridGame:
                 candidate = actor.position + offset
                 if not self.blocked(candidate, radius):
                     actor.position = candidate
+
+    def spawn_player(self, car_position=(-7, .5, 0)):
+        self.car_entity = self.add(Entity(model=car("sedan"), position=car_position, scale=1.25, collider="box"))
+        self.avatar = self.add(Entity(
+            model=character("character-gamer"),
+            texture=f"{CHARACTERS}/Textures/colormap.png",
+            position=(car_position[0] + 1.5, 0, car_position[2]),
+            scale=2.25,
+        ))
+        self.avatar.enabled = False
+        self.in_car = True
+
+    def spawn_enemies(self):
+        for kind, pos, tint, model_name, hp in self.LEVELS[self.street]:
+            scale = 1.05 if kind == "zsti_boss" else .65
+            enemy = Entity(model=skeleton(model_name), position=pos, rotation_x=0, scale=scale, color=tint)
+            self.enemies.append({"entity": enemy, "kind": kind, "hp": hp, "max_hp": hp, "dead": False, "tint": tint})
+
+    def build_boss_arena(self):
+        """Final ZSTI courtyard reached from the east road."""
+        asphalt = color.rgb32(42, 45, 55)
+        court = color.rgb32(91, 104, 114)
+        self.add(Entity(model="cube", position=(-18, .01, 0), scale=(28, .10, 8), color=asphalt, shader=unlit_shader))
+        self.add(Entity(model="cube", position=(7, .02, 0), scale=(24, .11, 22), color=court, shader=unlit_shader))
+        # Painted court lines make the final battle space readable from above.
+        for z in (-9.5, 9.5):
+            self.add(Entity(model="cube", position=(7, .09, z), scale=(24, .025, .16), color=YELLOW, shader=unlit_shader))
+        for x in (-5, 19):
+            self.add(Entity(model="cube", position=(x, .09, 0), scale=(.16, .025, 19), color=YELLOW, shader=unlit_shader))
+        self.add(Entity(model="cube", position=(7, .09, 0), scale=(.12, .025, 19), color=color.white, shader=unlit_shader))
+        # Fences frame the arena but leave its western entrance open.
+        for x in range(-3, 20, 3):
+            self.add(Entity(model=city("fence-1x3"), position=(x, 0, -10.5), scale=1.2))
+            self.add(Entity(model=city("fence-1x3"), position=(x, 0, 10.5), scale=1.2))
+        self.building_bounds.extend([(-5.5, 20.5, -11.2, -10.0), (-5.5, 20.5, 10.0, 11.2)])
+        self.shop = self.add(Entity(position=(999, 0, 999), enabled=False))
+        self.board = self.add(Entity(position=(999, 0, 999), enabled=False))
+        self.add_building("building-type-r", (23, 0, 0), 3.2)
+        for name, pos, size in (("tree-large", (17, 0, -8), 1.5), ("tree-large", (17, 0, 8), 1.5),
+                                ("planter", (2, 0, -8), 1.4), ("planter", (2, 0, 8), 1.4)):
+            self.add(Entity(model=city(name), position=pos, scale=size))
+        self.spawn_player((-20, .5, 0))
+        self.spawn_enemies()
+        camera.position = (-20, 19, -18)
+        camera.look_at(self.car_entity.position)
 
     def get_mouse_aim_point(self) -> Vec3:
         """Return the cursor's point on the street plane."""
@@ -280,6 +328,7 @@ class HybridGame:
         for enemy in self.enemies:
             destroy(enemy["entity"])
         self.scene_entities.clear(); self.traffic.clear()
+        self.east_exit_markers.clear()
         self.building_bounds.clear()
         self.enemies.clear()
         # Continuous grass base and asphalt underlays keep the city readable even
@@ -288,6 +337,9 @@ class HybridGame:
         # the XZ orientation explicit, so the green field always fills the map.
         self.add(Entity(model="cube", position=(0, -.30, 0), scale=(120, .6, 120), texture="white_cube", shader=unlit_shader, color=color.rgb32(42, 112, 58)))
         self.add(Entity(model="cube", position=(0, -.08, 0), scale=(120, .04, 120), collider="box", visible=False))
+        if self.street == 2:
+            self.build_boss_arena()
+            return
         self.add(Entity(model="cube", position=(0, -.005, 0), scale=(66, .08, 8.2), texture="white_cube", shader=unlit_shader, color=color.rgb32(48, 51, 61)))
         self.add(Entity(model="cube", position=(0, 0, 0), scale=(8.2, .08, 52), texture="white_cube", shader=unlit_shader, color=color.rgb32(48, 51, 61)))
         # Continuous asphalt, with lane markings stopping before the junction.
@@ -329,21 +381,14 @@ class HybridGame:
             self.add(Entity(model=road("dumpster"), position=pos, scale=1.1))
         self.shop = self.add_building("building-type-b", (8, 0, 17), 2.1)
         self.board = self.add_building("building-type-d", (-8, 0, 17), 1.9)
-        if self.street == 2:
-            school_pos = (17, 0, 9)
-            self.add_building("building-type-r", school_pos, 2.8)
-        self.car_entity = Entity(model=car("sedan"), position=(-7, .5, 0), scale=1.25, collider="box")
-        self.add(self.car_entity)
-        # The OBJ loader is compatible with this Ursina/glTF version; provide the
-        # shared Kenney colormap explicitly because the MTL uses a relative path.
-        self.avatar = self.add(Entity(model=character("character-gamer"), texture=f"{CHARACTERS}/Textures/colormap.png", position=(-5.5, 0, 0), scale=2.25))
-        self.avatar.enabled = False
-        self.in_car = True
+        for z in (-2.2, 0, 2.2):
+            marker = self.add(Entity(model="cube", position=(25, .22, z), scale=(2.4, .08, .16),
+                                     rotation_y=-25, color=CYAN, shader=unlit_shader, enabled=False))
+            self.east_exit_markers.append(marker)
+        self.spawn_player()
         for name, pos, rotation in (("taxi", (-15, .45, 0), 0), ("police", (11, .45, 0), 0), ("van", (0, .45, 12), 90), ("delivery", (0, .45, -12), 90)):
             self.traffic.append(Entity(model=car(name), position=pos, rotation_y=rotation, scale=1.2))
-        for kind, pos, tint, model_name, hp in self.LEVELS[self.street]:
-            enemy = Entity(model=skeleton(model_name), position=pos, rotation_x=0, scale=.65, color=tint)
-            self.enemies.append({"entity": enemy, "kind": kind, "hp": hp, "dead": False, "tint": tint})
+        self.spawn_enemies()
         camera.position = (-7, 19, -18); camera.look_at(self.car_entity.position)
 
     def start(self):
@@ -383,6 +428,9 @@ class HybridGame:
             message = "Return to the car and drive east"
         self.notice.text = message
         self.notice.enabled = self.notice_bg.enabled = bool(message)
+        open_exit = self.street < 2 and all(enemy["dead"] for enemy in self.enemies)
+        for marker in self.east_exit_markers:
+            marker.enabled = open_exit
 
     def show_menu(self):
         self.hide_ui()
