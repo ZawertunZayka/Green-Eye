@@ -108,12 +108,22 @@ class HybridGame:
         self.scene_entities.append(entity)
         return entity
 
-    def show_cleanup_hit(self, target: Entity | None) -> None:
+    def get_mouse_aim_point(self) -> Vec3:
+        """Return the cursor's point on the street plane."""
+        if mouse.collision and mouse.collision.world_point:
+            point = Vec3(mouse.collision.world_point)
+            point.y = 0
+            return point
+        return self.avatar.position + self.avatar.forward * 8
+
+    def show_cleanup_hit(self, target: Entity | None, aim_point: Vec3 | None = None) -> None:
         """Show a short, readable cleanup beam instead of an invisible hit."""
         if not self.avatar:
             return
         start = self.avatar.position + Vec3(0, 1.1, 0)
-        end = target.position + Vec3(0, 1.0, 0) if target else start + self.avatar.forward * 2.5
+        end = target.position + Vec3(0, 1.0, 0) if target else (aim_point or start + self.avatar.forward * 2.5)
+        if not target:
+            end.y = 1.0
         beam = Entity(
             model="cube",
             position=(start + end) / 2,
@@ -150,6 +160,7 @@ class HybridGame:
         # Thin horizontal cubes are used instead of planes: in Ursina this makes
         # the XZ orientation explicit, so the green field always fills the map.
         self.add(Entity(model="cube", position=(0, -.30, 0), scale=(120, .6, 120), texture="white_cube", shader=unlit_shader, color=color.rgb32(42, 112, 58)))
+        self.add(Entity(model="cube", position=(0, -.08, 0), scale=(120, .04, 120), collider="box", visible=False))
         self.add(Entity(model="cube", position=(0, -.005, 0), scale=(66, .08, 8.2), texture="white_cube", shader=unlit_shader, color=color.rgb32(48, 51, 61)))
         self.add(Entity(model="cube", position=(0, 0, 0), scale=(8.2, .08, 52), texture="white_cube", shader=unlit_shader, color=color.rgb32(48, 51, 61)))
         # Real road GLBs, not flat Python rectangles.
@@ -280,12 +291,24 @@ class HybridGame:
                     return
                 if self.attack_cooldown > 0: return
                 self.attack_cooldown = .28
-                target = min((e for e in self.enemies if not e["dead"]), key=lambda e: distance(self.avatar, e["entity"]), default=None)
+                aim_point = self.get_mouse_aim_point()
+                aim = aim_point - self.avatar.position
+                aim.y = 0
+                if aim.length():
+                    self.avatar.rotation_y = math.degrees(math.atan2(aim.x, aim.z))
+                candidates = []
+                for enemy in self.enemies:
+                    if enemy["dead"]:
+                        continue
+                    to_enemy = enemy["entity"].position - self.avatar.position
+                    to_enemy.y = 0
+                    if not to_enemy.length() or to_enemy.length() > 3.2 or not aim.length():
+                        continue
+                    alignment = aim.dot(to_enemy) / (aim.length() * to_enemy.length())
+                    if alignment >= .65:
+                        candidates.append(enemy)
+                target = min(candidates, key=lambda e: distance(self.avatar, e["entity"]), default=None)
                 if target and distance(self.avatar, target["entity"]) < 3.2:
-                    aim = target["entity"].position - self.avatar.position
-                    aim.y = 0
-                    if aim.length():
-                        self.avatar.rotation_y = math.degrees(math.atan2(aim.x, aim.z))
                     self.show_cleanup_hit(target["entity"])
                     target["hp"] -= 1; self.notice.text = "PAN BONK!"
                     direction = target["entity"].position - self.avatar.position; direction.y = 0
@@ -297,7 +320,7 @@ class HybridGame:
                         if self.street == 2 and all(e["dead"] for e in self.enemies):
                             invoke(self.win_game, delay=.35)
                 else:
-                    self.show_cleanup_hit(None)
+                    self.show_cleanup_hit(None, aim_point)
                     self.notice.text = "NO TARGET IN RANGE"
             elif key == "e" and distance(self.avatar if not self.in_car else self.car_entity, self.shop) < 4: self.open_shop()
             elif key == "e" and distance(self.avatar if not self.in_car else self.car_entity, self.board) < 4: self.open_quest()
